@@ -251,6 +251,13 @@ impl AjoCircleContract {
             .get(&DataKey::MissedCount(circle_id, member))
             .unwrap_or(0)
     }
+
+    /// Total number of circles ever created — circle ids are sequential
+    /// starting at 1, so this doubles as the id of the most recently
+    /// created circle.
+    pub fn total_circles(env: Env) -> u64 {
+        env.storage().instance().get(&DataKey::NextCircleId).unwrap_or(0)
+    }
 }
 
 fn is_member(members: &Vec<Address>, addr: &Address) -> bool {

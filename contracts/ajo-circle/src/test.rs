@@ -289,3 +289,19 @@ fn disburse_on_an_unknown_circle_fails() {
         Err(Ok(ContractError::CircleNotFound))
     );
 }
+
+#[test]
+fn total_circles_tracks_the_running_count() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let a = Address::generate(&env);
+
+    assert_eq!(client.total_circles(), 0);
+
+    client.create_circle(&a, &token, &1_000, &2, &WEEK);
+    assert_eq!(client.total_circles(), 1);
+
+    client.create_circle(&a, &token, &2_000, &3, &WEEK);
+    assert_eq!(client.total_circles(), 2);
+}
