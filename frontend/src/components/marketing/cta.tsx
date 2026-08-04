@@ -7,8 +7,16 @@ export function Cta() {
   return (
     <section className="border-t border-border bg-accent text-accent-foreground">
       <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-20 sm:px-6">
-        <div className="ring-motif pointer-events-none absolute -right-24 -top-24 h-72 w-72 border-accent-foreground/20" />
-        <div className="ring-motif pointer-events-none absolute -bottom-32 -left-16 h-56 w-56 border-accent-foreground/10" />
+        <motion.div
+          className="ring-motif pointer-events-none absolute -right-24 -top-24 h-72 w-72 border-accent-foreground/20"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
+        />
+        <motion.div
+          className="ring-motif pointer-events-none absolute -bottom-32 -left-16 h-56 w-56 border-accent-foreground/10"
+          animate={{ rotate: -360 }}
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

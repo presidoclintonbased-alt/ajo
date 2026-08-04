@@ -47,9 +47,13 @@ export function WhyStellar() {
                 transition={{ duration: 0.5, delay: index * 0.06 }}
                 className="flex items-start gap-5"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold">
+                <motion.span
+                  whileHover={{ scale: 1.12, rotate: 8 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 12 }}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold"
+                >
                   <Icon size={19} />
-                </span>
+                </motion.span>
                 <div>
                   <h3 className="text-base font-medium text-foreground">{reason.title}</h3>
                   <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-muted">{reason.body}</p>

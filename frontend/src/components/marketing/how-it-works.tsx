@@ -27,8 +27,14 @@ export function HowItWorks() {
       </div>
 
       <div className="relative mt-16">
-        <div className="absolute left-5 top-5 hidden h-[calc(100%-2.5rem)] w-px bg-border-strong md:block" />
-        <div className="absolute left-0 top-5 hidden h-px w-full bg-border-strong md:block" />
+        <motion.div
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          style={{ transformOrigin: "left" }}
+          className="absolute left-0 top-5 hidden h-px w-full bg-border-strong md:block"
+        />
 
         <div className="flex flex-col gap-10 md:flex-row md:gap-6">
           {STEPS.map((item, index) => (
@@ -37,12 +43,18 @@ export function HowItWorks() {
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.5, delay: index * 0.12 }}
+              transition={{ duration: 0.5, delay: 0.3 + index * 0.15 }}
               className="relative flex-1"
             >
-              <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
+              <motion.div
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ delay: 0.25 + index * 0.15, type: "spring", stiffness: 300, damping: 15 }}
+                className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground"
+              >
                 {index + 1}
-              </div>
+              </motion.div>
               <h3 className="mt-5 text-lg font-medium text-foreground">{item.title}</h3>
               <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{item.body}</p>
             </motion.div>
