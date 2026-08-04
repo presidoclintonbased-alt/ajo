@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { Button, Card, Badge, Spinner, EmptyState } from "@/components/ui";
+import { Button, Card, Badge, EmptyState } from "@/components/ui";
 import { useWallet } from "@/context/wallet-context";
 import {
   Circle,
@@ -213,7 +213,15 @@ export default function CirclesPage() {
               {loadError ? (
                 <Card className="p-6 text-sm text-accent-rose">{loadError}</Card>
               ) : circles === null ? (
-                <Spinner label="Loading circles…" />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2].map((i) => (
+                    <Card key={i} className="h-[136px] animate-pulse p-5">
+                      <div className="h-3 w-20 rounded-full bg-border" />
+                      <div className="mt-4 h-5 w-24 rounded-full bg-border" />
+                      <div className="mt-2 h-3 w-16 rounded-full bg-border" />
+                    </Card>
+                  ))}
+                </div>
               ) : circles.length === 0 ? (
                 <Card>
                   <EmptyState>No circles yet. Start the first one above.</EmptyState>
