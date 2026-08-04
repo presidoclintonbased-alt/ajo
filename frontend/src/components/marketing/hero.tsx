@@ -1,16 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { getTotalCircles } from "@/lib/contract";
 
 export function Hero() {
+  const [totalCircles, setTotalCircles] = useState<bigint | null>(null);
+
+  useEffect(() => {
+    getTotalCircles()
+      .then(setTotalCircles)
+      .catch(() => undefined);
+  }, []);
+
   return (
     <section className="dot-grid relative overflow-hidden border-b border-border">
       <div className="mx-auto max-w-3xl px-4 pb-16 pt-20 text-center sm:px-6 sm:pt-28">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <span className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-card px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
-            <span className="eyebrow !text-foreground">Live on Stellar testnet</span>
+            <span className="eyebrow !text-foreground">
+              {totalCircles !== null
+                ? `${totalCircles.toString()} circles created on testnet`
+                : "Live on Stellar testnet"}
+            </span>
           </span>
 
           <h1 className="font-display mt-8 text-5xl leading-[1.08] tracking-tight sm:text-7xl">

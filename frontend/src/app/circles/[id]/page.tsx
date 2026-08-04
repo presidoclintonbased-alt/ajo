@@ -193,7 +193,10 @@ function CircleDetail({
             {formatXlm(circle.contributionAmount)} XLM &middot; {formatCycleLength(circle.cycleLengthSecs)}
           </h1>
         </div>
-        <Badge tone={STATUS_TONE[circle.status]}>{STATUS_LABEL[circle.status]}</Badge>
+        <div className="flex items-center gap-3">
+          <CopyButton value={window.location.href} label="Copy invite link" />
+          <Badge tone={STATUS_TONE[circle.status]}>{STATUS_LABEL[circle.status]}</Badge>
+        </div>
       </div>
 
       <Card className="p-6">
