@@ -16,7 +16,7 @@ export function Hero() {
 
   return (
     <section className="dot-grid relative overflow-hidden border-b border-border">
-      <div className="mx-auto max-w-3xl px-4 pb-16 pt-20 text-center sm:px-6 sm:pt-28">
+      <div className="mx-auto max-w-3xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <span className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-card px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
@@ -52,17 +52,10 @@ export function Hero() {
               See how it works
             </a>
           </div>
+
+          <CircleWheel />
         </motion.div>
       </div>
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.94 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, delay: 0.15 }}
-        className="mx-auto pb-20"
-      >
-        <CircleWheel />
-      </motion.div>
     </section>
   );
 }
@@ -79,25 +72,42 @@ function CircleWheel() {
   const radius = 42;
 
   return (
-    <div className="relative mx-auto aspect-square w-[min(90vw,22rem)] sm:w-[24rem]">
-      <div className="ring-motif absolute inset-0" />
+    <motion.div
+      initial={{ opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, delay: 0.15 }}
+      className="relative mx-auto mt-14 aspect-square w-[min(90vw,22rem)] sm:w-[24rem]"
+    >
+      <motion.div
+        className="ring-motif absolute inset-0"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 36, repeat: Infinity, ease: "linear" }}
+      />
 
-      <div className="card absolute inset-[32%] flex items-center justify-center text-center">
+      <motion.div
+        className="card absolute inset-[32%] flex items-center justify-center text-center"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, delay: 0.5 }}
+      >
         <div>
           <p className="eyebrow !text-[10px]">Cycle</p>
           <p className="font-display text-2xl italic accent-text">2 of 5</p>
         </div>
-      </div>
+      </motion.div>
 
-      {CYCLE.map((member) => {
+      {CYCLE.map((member, index) => {
         const rad = (member.angle * Math.PI) / 180;
         const x = 50 + radius * Math.cos(rad);
         const y = 50 + radius * Math.sin(rad);
         return (
-          <div
+          <motion.div
             key={member.label}
             className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
             style={{ left: `${x}%`, top: `${y}%` }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.25 + index * 0.1, type: "spring", stiffness: 260, damping: 18 }}
           >
             <div
               className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium sm:h-12 sm:w-12 ${
@@ -110,9 +120,9 @@ function CircleWheel() {
             >
               {member.label}
             </div>
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
