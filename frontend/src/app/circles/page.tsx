@@ -33,11 +33,13 @@ const STATUS_TONE = {
   [CircleStatus.Forming]: "gold" as const,
   [CircleStatus.Active]: "green" as const,
   [CircleStatus.Completed]: "muted" as const,
+  [CircleStatus.Cancelled]: "rose" as const,
 };
 const STATUS_LABEL = {
   [CircleStatus.Forming]: "Forming",
   [CircleStatus.Active]: "Active",
   [CircleStatus.Completed]: "Completed",
+  [CircleStatus.Cancelled]: "Cancelled",
 };
 
 export default function CirclesPage() {

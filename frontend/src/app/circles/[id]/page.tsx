@@ -12,9 +12,11 @@ import {
   Circle,
   CircleStatus,
   ContractCallError,
+  buildCancelCircleTx,
   buildContributeTx,
   buildDisburseTx,
   buildJoinCircleTx,
+  buildLeaveCircleTx,
   getCircle,
   hasContributed,
   missedCount,
@@ -27,11 +29,13 @@ const STATUS_TONE = {
   [CircleStatus.Forming]: "gold" as const,
   [CircleStatus.Active]: "green" as const,
   [CircleStatus.Completed]: "muted" as const,
+  [CircleStatus.Cancelled]: "rose" as const,
 };
 const STATUS_LABEL = {
   [CircleStatus.Forming]: "Forming",
   [CircleStatus.Active]: "Active",
   [CircleStatus.Completed]: "Completed",
+  [CircleStatus.Cancelled]: "Cancelled",
 };
 
 interface MemberRow {
@@ -56,7 +60,7 @@ export default function CircleDetailPage() {
   const [error, setError] = useState<string | null>(
     circleId === null ? `"${params.id}" isn't a valid circle id.` : null,
   );
-  const [busy, setBusy] = useState<"join" | "contribute" | "disburse" | null>(null);
+  const [busy, setBusy] = useState<"join" | "contribute" | "disburse" | "leave" | "cancel" | null>(null);
 
   const refresh = useCallback(async () => {
     if (circleId === null) return;
@@ -141,6 +145,43 @@ export default function CircleDetailPage() {
     }
   }
 
+  async function handleLeave() {
+    if (circleId === null) return;
+    setBusy("leave");
+    try {
+      const wallet = await ensureWallet();
+      const unsignedXdr = await buildLeaveCircleTx(circleId, wallet);
+      const signedXdr = await signTransaction(unsignedXdr);
+      await submitSignedTx(signedXdr);
+      toast.success("Left circle");
+      await refresh();
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not leave circle."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleCancel() {
+    if (circleId === null) return;
+    if (!window.confirm("Cancel this circle? It can't be undone, and no one will be able to join it again.")) {
+      return;
+    }
+    setBusy("cancel");
+    try {
+      const wallet = await ensureWallet();
+      const unsignedXdr = await buildCancelCircleTx(circleId, wallet);
+      const signedXdr = await signTransaction(unsignedXdr);
+      await submitSignedTx(signedXdr);
+      toast.success("Circle cancelled");
+      await refresh();
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not cancel circle."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <>
       <Navbar />
@@ -159,6 +200,8 @@ export default function CircleDetailPage() {
               onJoin={handleJoin}
               onContribute={handleContribute}
               onDisburse={handleDisburse}
+              onLeave={handleLeave}
+              onCancel={handleCancel}
             />
           )}
         </div>
@@ -176,16 +219,21 @@ function CircleDetail({
   onJoin,
   onContribute,
   onDisburse,
+  onLeave,
+  onCancel,
 }: {
   circle: Circle;
   members: MemberRow[];
   address: string | null;
-  busy: "join" | "contribute" | "disburse" | null;
+  busy: "join" | "contribute" | "disburse" | "leave" | "cancel" | null;
   onJoin: () => void;
   onContribute: () => void;
   onDisburse: () => void;
+  onLeave: () => void;
+  onCancel: () => void;
 }) {
   const isMember = address ? circle.members.includes(address) : false;
+  const isCreator = address === circle.creator;
   const myRow = members.find((m) => m.address === address);
   const recipient =
     circle.status !== CircleStatus.Completed && circle.currentCycle < circle.members.length
@@ -239,6 +287,16 @@ function CircleDetail({
           {circle.status === CircleStatus.Forming && !isMember && (
             <Button onClick={onJoin} disabled={busy !== null}>
               {busy === "join" ? "Joining…" : "Join this circle"}
+            </Button>
+          )}
+          {circle.status === CircleStatus.Forming && isMember && (
+            <Button variant="outline" onClick={onLeave} disabled={busy !== null}>
+              {busy === "leave" ? "Leaving…" : "Leave circle"}
+            </Button>
+          )}
+          {circle.status === CircleStatus.Forming && isCreator && (
+            <Button variant="danger" onClick={onCancel} disabled={busy !== null}>
+              {busy === "cancel" ? "Cancelling…" : "Cancel circle"}
             </Button>
           )}
           {circle.status === CircleStatus.Active && isMember && !myRow?.paidThisCycle && (

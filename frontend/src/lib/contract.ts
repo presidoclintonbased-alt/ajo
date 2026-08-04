@@ -24,6 +24,7 @@ export enum CircleStatus {
   Forming = 0,
   Active = 1,
   Completed = 2,
+  Cancelled = 3,
 }
 
 export interface Circle {
@@ -158,6 +159,20 @@ export function buildContributeTx(circleId: bigint, member: string) {
 
 export function buildDisburseTx(circleId: bigint, caller: string) {
   return buildTx(caller, "disburse", [nativeToScVal(circleId, { type: "u64" })]);
+}
+
+export function buildLeaveCircleTx(circleId: bigint, member: string) {
+  return buildTx(member, "leave_circle", [
+    nativeToScVal(circleId, { type: "u64" }),
+    new Address(member).toScVal(),
+  ]);
+}
+
+export function buildCancelCircleTx(circleId: bigint, caller: string) {
+  return buildTx(caller, "cancel_circle", [
+    nativeToScVal(circleId, { type: "u64" }),
+    new Address(caller).toScVal(),
+  ]);
 }
 
 /** Submit a wallet-signed transaction XDR and poll until it lands. */
