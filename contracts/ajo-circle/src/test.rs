@@ -400,3 +400,117 @@ fn rejects_cancellation_by_a_non_creator_or_of_an_active_circle() {
         Err(Ok(ContractError::CircleNotForming))
     );
 }
+
+#[test]
+fn disburse_fails_once_a_circle_is_completed_or_cancelled() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, asset) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+    asset.mint(&a, &10_000);
+    asset.mint(&b, &10_000);
+
+    // Completed: a 2-member circle finishes after both cycles pay out.
+    let completed = client.create_circle(&a, &token, &1_000, &2, &WEEK);
+    client.join_circle(&completed, &b);
+    for _ in 0..2 {
+        client.contribute(&completed, &a);
+        client.contribute(&completed, &b);
+        client.disburse(&completed);
+    }
+    assert_eq!(client.get_circle(&completed).status, CircleStatus::Completed);
+    assert_eq!(
+        client.try_disburse(&completed),
+        Err(Ok(ContractError::CircleNotActive))
+    );
+
+    // Cancelled: never activated, so disburse was never valid to begin with.
+    let cancelled = client.create_circle(&a, &token, &1_000, &2, &WEEK);
+    client.cancel_circle(&cancelled, &a);
+    assert_eq!(client.get_circle(&cancelled).status, CircleStatus::Cancelled);
+    assert_eq!(
+        client.try_disburse(&cancelled),
+        Err(Ok(ContractError::CircleNotActive))
+    );
+}
+
+#[test]
+fn missed_count_accumulates_across_multiple_missed_cycles() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, asset) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+    asset.mint(&a, &10_000);
+
+    let id = client.create_circle(&a, &token, &1_000, &2, &WEEK);
+    client.join_circle(&id, &b);
+
+    // b misses two cycles in a row.
+    client.contribute(&id, &a);
+    env.ledger().with_mut(|l| l.timestamp += WEEK + 1);
+    client.disburse(&id);
+    assert_eq!(client.missed_count(&id, &b), 1);
+
+    client.contribute(&id, &a);
+    env.ledger().with_mut(|l| l.timestamp += WEEK + 1);
+    client.disburse(&id);
+    assert_eq!(client.missed_count(&id, &b), 2);
+}
+
+#[test]
+fn read_queries_on_an_unknown_circle_or_member_return_defaults_not_errors() {
+    let env = Env::default();
+    let client = setup(&env);
+    let stranger = Address::generate(&env);
+
+    // has_contributed / missed_count check storage directly rather than
+    // going through get_circle, so they don't fail on a circle id (or
+    // member) that was never created — they just report "no, never" the
+    // same way they would for a real member who simply hasn't acted yet.
+    assert_eq!(client.has_contributed(&999, &0, &stranger), false);
+    assert_eq!(client.missed_count(&999, &stranger), 0);
+
+    assert_eq!(
+        client.try_get_circle(&999),
+        Err(Ok(ContractError::CircleNotFound))
+    );
+}
+
+#[test]
+fn full_rotation_scales_past_a_handful_of_members() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, token_client, asset) = create_token(&env);
+
+    let mut members: soroban_sdk::Vec<Address> = soroban_sdk::Vec::new(&env);
+    for _ in 0..10 {
+        let m = Address::generate(&env);
+        asset.mint(&m, &100_000);
+        members.push_back(m);
+    }
+
+    let creator = members.get(0).unwrap();
+    let id = client.create_circle(&creator, &token, &1_000, &10, &WEEK);
+    for i in 1..members.len() {
+        client.join_circle(&id, &members.get(i).unwrap());
+    }
+    assert_eq!(client.get_circle(&id).status, CircleStatus::Active);
+
+    for cycle in 0..10u32 {
+        for m in members.iter() {
+            client.contribute(&id, &m);
+        }
+        let recipient = client.disburse(&id);
+        assert_eq!(recipient, members.get(cycle).unwrap());
+    }
+
+    let circle = client.get_circle(&id);
+    assert_eq!(circle.status, CircleStatus::Completed);
+    // Each of the 10 members put in 10_000 total and got exactly one
+    // 10_000 pot back.
+    for m in members.iter() {
+        assert_eq!(token_client.balance(&m), 100_000);
+    }
+}

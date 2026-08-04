@@ -26,7 +26,7 @@ pub enum CircleStatus {
 }
 
 #[contracttype]
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Circle {
     pub id: u64,
     pub creator: Address,
