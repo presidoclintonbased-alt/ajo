@@ -19,6 +19,7 @@ import {
   submitSignedTx,
 } from "@/lib/contract";
 import { formatCycleLength, formatXlm, shortenAddress, xlmToStroops } from "@/lib/format";
+import { getKnownCircleIds, rememberCircleIds } from "@/lib/circle-cache";
 import { WalletError } from "@/lib/wallet";
 import { ContractCallError } from "@/lib/contract";
 
@@ -60,8 +61,20 @@ export default function CirclesPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [ids, total] = await Promise.all([discoverCircleIds(), getTotalCircles()]);
-      const loaded = await Promise.all(ids.map((id) => getCircle(id)));
+      const [discovered, total] = await Promise.all([discoverCircleIds(), getTotalCircles()]);
+      rememberCircleIds(discovered);
+
+      const idSet = new Map<string, bigint>();
+      for (const id of [...discovered, ...getKnownCircleIds()]) idSet.set(id.toString(), id);
+
+      // Cached ids can predate a contract redeploy and no longer resolve —
+      // load with allSettled so one stale id can't blank out the whole list.
+      const results = await Promise.allSettled([...idSet.values()].map((id) => getCircle(id)));
+      const loaded = results
+        .filter((r): r is PromiseFulfilledResult<Circle> => r.status === "fulfilled")
+        .map((r) => r.value)
+        .sort((a, b) => (a.id < b.id ? 1 : -1));
+
       setCircles(loaded);
       setTotalCircles(total);
     } catch (err) {
@@ -111,6 +124,7 @@ export default function CirclesPage() {
       const unsignedXdr = await buildJoinCircleTx(BigInt(joinId), wallet);
       const signedXdr = await signTransaction(unsignedXdr);
       await submitSignedTx(signedXdr);
+      rememberCircleIds([BigInt(joinId)]);
       toast.success("Joined circle");
       router.push(`/circles/${joinId}`);
     } catch (err) {

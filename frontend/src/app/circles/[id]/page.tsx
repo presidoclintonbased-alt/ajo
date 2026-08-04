@@ -23,6 +23,7 @@ import {
   submitSignedTx,
 } from "@/lib/contract";
 import { formatCycleLength, formatDeadline, formatXlm, shortenAddress } from "@/lib/format";
+import { rememberCircleId } from "@/lib/circle-cache";
 import { WalletError } from "@/lib/wallet";
 
 const STATUS_TONE = {
@@ -67,6 +68,7 @@ export default function CircleDetailPage() {
     try {
       const loaded = await getCircle(circleId);
       setCircle(loaded);
+      rememberCircleId(circleId);
 
       const rows = await Promise.all(
         loaded.members.map(async (m): Promise<MemberRow> => ({
