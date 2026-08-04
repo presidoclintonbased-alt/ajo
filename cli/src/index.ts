@@ -1,0 +1,194 @@
+#!/usr/bin/env node
+import { Command } from "commander";
+import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
+import { AjoClient, CircleStatus } from "@ajo/sdk";
+import { loadConfig, saveConfig, configPath } from "./config";
+
+const STATUS_NAMES: Record<CircleStatus, string> = {
+  [CircleStatus.Forming]: "Forming",
+  [CircleStatus.Active]: "Active",
+  [CircleStatus.Completed]: "Completed",
+  [CircleStatus.Cancelled]: "Cancelled",
+};
+
+function client(): AjoClient {
+  const config = loadConfig();
+  return new AjoClient({
+    contractId: config.contractId,
+    rpcUrl: config.rpcUrl,
+    networkPassphrase: config.networkPassphrase,
+  });
+}
+
+function requireSecretKey(): { secretKey: string; publicKey: string } {
+  const config = loadConfig();
+  if (!config.secretKey) {
+    console.error("Not logged in. Run `ajo login <secret-key>` first.");
+    process.exit(1);
+  }
+  const kp = Keypair.fromSecret(config.secretKey);
+  return { secretKey: config.secretKey, publicKey: kp.publicKey() };
+}
+
+function signXdr(unsignedXdr: string, secretKey: string): string {
+  const config = loadConfig();
+  const kp = Keypair.fromSecret(secretKey);
+  const tx = TransactionBuilder.fromXDR(unsignedXdr, config.networkPassphrase);
+  tx.sign(kp);
+  return tx.toXDR();
+}
+
+function formatXlm(stroops: bigint): string {
+  const whole = stroops / 10_000_000n;
+  const frac = stroops % 10_000_000n;
+  if (frac === 0n) return whole.toString();
+  return `${whole}.${frac.toString().padStart(7, "0").replace(/0+$/, "")}`;
+}
+
+function xlmToStroops(xlm: string): bigint {
+  const [whole, frac = ""] = xlm.trim().split(".");
+  const paddedFrac = (frac + "0000000").slice(0, 7);
+  return BigInt(whole || "0") * 10_000_000n + BigInt(paddedFrac || "0");
+}
+
+const program = new Command();
+program.name("ajo").description("Command-line client for Ajo rotating savings circles").version("0.1.0");
+
+program
+  .command("login <secret-key>")
+  .description("Store a Stellar secret key locally for signing (kept in ~/.ajo/config.json, mode 0600)")
+  .action((secretKey: string) => {
+    const kp = Keypair.fromSecret(secretKey); // throws on an invalid key
+    const config = loadConfig();
+    saveConfig({ ...config, secretKey });
+    console.log(`Logged in as ${kp.publicKey()}`);
+    console.log(`Stored at ${configPath()} — this file holds your secret key in plaintext, same as the stellar CLI's own key store. Don't commit it or share it.`);
+  });
+
+program
+  .command("logout")
+  .description("Remove the stored secret key")
+  .action(() => {
+    const config = loadConfig();
+    delete config.secretKey;
+    saveConfig(config);
+    console.log("Logged out.");
+  });
+
+program
+  .command("whoami")
+  .description("Show the currently logged-in public key")
+  .action(() => {
+    const { publicKey } = requireSecretKey();
+    console.log(publicKey);
+  });
+
+program
+  .command("config")
+  .description("Show the current configuration (contract id, network, RPC url)")
+  .action(() => {
+    const config = loadConfig();
+    console.log(JSON.stringify({ ...config, secretKey: config.secretKey ? "[stored]" : undefined }, null, 2));
+  });
+
+const circles = program.command("circles").description("Manage rotating savings circles");
+
+circles
+  .command("list")
+  .description("List circles discovered from the contract's event log")
+  .action(async () => {
+    const ajo = client();
+    const ids = await ajo.discoverCircleIds();
+    if (ids.length === 0) {
+      console.log("No circles found.");
+      return;
+    }
+    for (const id of ids) {
+      const c = await ajo.getCircle(id);
+      console.log(
+        `#${c.id}  ${STATUS_NAMES[c.status].padEnd(10)}  ${formatXlm(c.contributionAmount)} per member  ${c.members.length}/${c.maxMembers} members`,
+      );
+    }
+  });
+
+circles
+  .command("show <id>")
+  .description("Show a circle's full state")
+  .action(async (id: string) => {
+    const ajo = client();
+    const c = await ajo.getCircle(BigInt(id));
+    console.log(`Circle #${c.id} — ${STATUS_NAMES[c.status]}`);
+    console.log(`  Creator:      ${c.creator}`);
+    console.log(`  Token:        ${c.token}`);
+    console.log(`  Contribution: ${formatXlm(c.contributionAmount)} per member`);
+    console.log(`  Members:      ${c.members.length}/${c.maxMembers}`);
+    console.log(`  Cycle:        ${c.currentCycle + 1} of ${c.maxMembers}`);
+    console.log(`  Payout order:`);
+    c.members.forEach((m, i) => console.log(`    ${i + 1}. ${m}${i === c.currentCycle ? "  (next payout)" : ""}`));
+  });
+
+circles
+  .command("create")
+  .description("Create a new circle")
+  .requiredOption("-a, --amount <xlm>", "contribution per member, in XLM")
+  .requiredOption("-m, --members <n>", "number of members")
+  .option("-c, --cycle-secs <seconds>", "cycle length in seconds", "604800")
+  .option("-t, --token <contractId>", "asset contract id (defaults to native XLM)")
+  .action(async (opts: { amount: string; members: string; cycleSecs: string; token?: string }) => {
+    const { secretKey, publicKey } = requireSecretKey();
+    const config = loadConfig();
+    const ajo = client();
+    const unsigned = await ajo.buildCreateCircleTx(
+      publicKey,
+      opts.token ?? config.nativeTokenId,
+      xlmToStroops(opts.amount),
+      Number(opts.members),
+      BigInt(opts.cycleSecs),
+    );
+    await ajo.submitSignedTx(signXdr(unsigned, secretKey));
+    console.log("Circle created. Run `ajo circles list` to find its id.");
+  });
+
+function memberAction(name: "join" | "leave" | "contribute", build: (ajo: AjoClient, id: bigint, pk: string) => Promise<string>) {
+  circles
+    .command(`${name} <id>`)
+    .description(`${name[0].toUpperCase()}${name.slice(1)} a circle`)
+    .action(async (id: string) => {
+      const { secretKey, publicKey } = requireSecretKey();
+      const ajo = client();
+      const unsigned = await build(ajo, BigInt(id), publicKey);
+      await ajo.submitSignedTx(signXdr(unsigned, secretKey));
+      console.log(`Done: ${name} on circle #${id}.`);
+    });
+}
+
+memberAction("join", (ajo, id, pk) => ajo.buildJoinCircleTx(id, pk));
+memberAction("leave", (ajo, id, pk) => ajo.buildLeaveCircleTx(id, pk));
+memberAction("contribute", (ajo, id, pk) => ajo.buildContributeTx(id, pk));
+
+circles
+  .command("cancel <id>")
+  .description("Cancel a circle you created, while it's still Forming")
+  .action(async (id: string) => {
+    const { secretKey, publicKey } = requireSecretKey();
+    const ajo = client();
+    const unsigned = await ajo.buildCancelCircleTx(BigInt(id), publicKey);
+    await ajo.submitSignedTx(signXdr(unsigned, secretKey));
+    console.log(`Circle #${id} cancelled.`);
+  });
+
+circles
+  .command("disburse <id>")
+  .description("Trigger the current cycle's payout — callable by anyone, not just members")
+  .action(async (id: string) => {
+    const { secretKey, publicKey } = requireSecretKey();
+    const ajo = client();
+    const unsigned = await ajo.buildDisburseTx(BigInt(id), publicKey);
+    await ajo.submitSignedTx(signXdr(unsigned, secretKey));
+    console.log(`Payout triggered for circle #${id}.`);
+  });
+
+program.parseAsync(process.argv).catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});

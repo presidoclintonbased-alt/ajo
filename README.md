@@ -70,6 +70,8 @@ frontend/       Next.js web app — landing page and the app itself (create,
                 directly; no backend.
 sdk/            @ajo/sdk — the same non-custodial client logic that backs
                 the frontend, packaged for any third-party app to use.
+cli/            @ajo/cli — a terminal client built on @ajo/sdk (create,
+                join, contribute, disburse from a script or a shell).
 ```
 
 ## Quick start
@@ -124,6 +126,12 @@ and every rejected-input case. See `contracts/ajo-circle/src/test.rs`.
 `sdk/` — the same client logic that backs the frontend, packaged as
 `@ajo/sdk` for any third-party app to integrate with directly. See
 [sdk/README.md](./sdk/README.md).
+
+## CLI
+
+`cli/` — `@ajo/cli`, a terminal client built on `@ajo/sdk`: create, join,
+leave, cancel, contribute, and disburse from a script or a shell instead of
+the web app. See [cli/README.md](./cli/README.md).
 
 ## Roadmap
 

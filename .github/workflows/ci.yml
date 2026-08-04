@@ -65,3 +65,28 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+
+      # cli depends on sdk via a local file: reference, so sdk needs a
+      # real dist/ on disk before `npm ci` in cli resolves it.
+      - run: npm ci && npm run build
+        working-directory: sdk
+
+      - run: npm ci
+        working-directory: cli
+      - run: npm run typecheck
+        working-directory: cli
+      - run: npm run test
+        working-directory: cli
+      - run: npm run build
+        working-directory: cli

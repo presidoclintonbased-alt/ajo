@@ -6,7 +6,7 @@ labels: bug
 ---
 
 **Which package?**
-<!-- contracts / frontend / sdk -->
+<!-- contracts / frontend / sdk / cli -->
 
 **What happened?**
 

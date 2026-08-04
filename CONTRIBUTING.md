@@ -6,6 +6,7 @@
 contracts/    Soroban contract (Rust) — ajo-circle
 frontend/     Next.js web app — landing page + the app itself
 sdk/          @ajo/sdk — the same client logic, packaged for third parties
+cli/          @ajo/cli — a terminal client built on @ajo/sdk
 ```
 
 There is no backend. The frontend talks to the deployed contract directly
@@ -39,6 +40,12 @@ npm run test
 npm run build
 
 cd ../sdk
+npm run typecheck
+npm run test
+npm run build   # cli's file:../sdk dependency needs this dist/ to exist
+
+cd ../cli
+npm install
 npm run typecheck
 npm run test
 npm run build

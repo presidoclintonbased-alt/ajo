@@ -6,7 +6,7 @@ labels: enhancement
 ---
 
 **Which package?**
-<!-- contracts / frontend / sdk / cross-cutting -->
+<!-- contracts / frontend / sdk / cli / cross-cutting -->
 
 **What problem does this solve?**
 
