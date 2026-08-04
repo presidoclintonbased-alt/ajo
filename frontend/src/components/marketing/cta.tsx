@@ -17,7 +17,7 @@ export function Cta() {
           className="relative"
         >
           <p className="eyebrow !text-accent-foreground/80">Get started</p>
-          <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="font-display mt-3 max-w-xl text-3xl italic tracking-tight sm:text-4xl">
             Free while Ajo is on testnet
           </h2>
           <p className="mt-4 max-w-xl text-accent-foreground/75">

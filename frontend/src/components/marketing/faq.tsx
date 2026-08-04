@@ -35,7 +35,7 @@ export function Faq() {
       <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <div className="max-w-xl">
           <p className="eyebrow">Questions</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Common questions</h2>
+          <h2 className="font-display mt-3 text-3xl tracking-tight sm:text-4xl">Common questions</h2>
         </div>
 
         <div className="mt-10 max-w-3xl">

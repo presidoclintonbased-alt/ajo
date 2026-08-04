@@ -24,7 +24,7 @@ export default function AboutPage() {
         <section className="dot-grid border-b border-border">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
             <p className="eyebrow">About Ajo</p>
-            <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            <h1 className="font-display mt-3 max-w-2xl text-4xl tracking-tight sm:text-5xl">
               The tradition already works. We just moved who holds the pot.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
@@ -40,7 +40,7 @@ export default function AboutPage() {
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
             <div className="max-w-xl">
               <p className="eyebrow">What changes</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight">Same circle, different custodian</h2>
+              <h2 className="font-display mt-3 text-3xl tracking-tight">Same circle, different custodian</h2>
             </div>
 
             <div className="mt-10 overflow-x-auto">
@@ -70,7 +70,7 @@ export default function AboutPage() {
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
             <div className="max-w-xl">
               <p className="eyebrow">Where this is today</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight">Honest status</h2>
+              <h2 className="font-display mt-3 text-3xl tracking-tight">Honest status</h2>
             </div>
             <div className="mt-8 max-w-2xl space-y-4 text-sm leading-relaxed text-muted">
               <p>
