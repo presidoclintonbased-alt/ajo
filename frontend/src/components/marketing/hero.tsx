@@ -68,6 +68,8 @@ const CYCLE = [
   { angle: 198, label: "5", state: "waiting" as const },
 ];
 
+const ORBIT_DURATION = 36;
+
 function CircleWheel() {
   const radius = 42;
 
@@ -78,14 +80,9 @@ function CircleWheel() {
       transition={{ duration: 0.6, delay: 0.15 }}
       className="relative mx-auto mt-14 aspect-square w-[min(90vw,22rem)] sm:w-[24rem]"
     >
+      {/* Fixed center — doesn't participate in the orbit. */}
       <motion.div
-        className="ring-motif absolute inset-0"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 36, repeat: Infinity, ease: "linear" }}
-      />
-
-      <motion.div
-        className="card absolute inset-[32%] flex items-center justify-center text-center"
+        className="card absolute inset-[32%] z-10 flex items-center justify-center text-center"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 0.5 }}
@@ -96,33 +93,47 @@ function CircleWheel() {
         </div>
       </motion.div>
 
-      {CYCLE.map((member, index) => {
-        const rad = (member.angle * Math.PI) / 180;
-        const x = 50 + radius * Math.cos(rad);
-        const y = 50 + radius * Math.sin(rad);
-        return (
-          <motion.div
-            key={member.label}
-            className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
-            style={{ left: `${x}%`, top: `${y}%` }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: 0.25 + index * 0.1, type: "spring", stiffness: 260, damping: 18 }}
-          >
-            <div
-              className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium sm:h-12 sm:w-12 ${
-                member.state === "paid"
-                  ? "bg-accent text-accent-foreground"
-                  : member.state === "next"
-                    ? "border-2 border-accent bg-card text-accent"
-                    : "border border-border-strong bg-card text-muted"
-              }`}
+      {/* Everything below actually orbits — the ring and the members move together. */}
+      <motion.div
+        className="absolute inset-0"
+        animate={{ rotate: 360 }}
+        transition={{ duration: ORBIT_DURATION, repeat: Infinity, ease: "linear" }}
+      >
+        <div className="ring-motif absolute inset-0" />
+
+        {CYCLE.map((member, index) => {
+          const rad = (member.angle * Math.PI) / 180;
+          const x = 50 + radius * Math.cos(rad);
+          const y = 50 + radius * Math.sin(rad);
+          return (
+            <motion.div
+              key={member.label}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${x}%`, top: `${y}%` }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1, rotate: -360 }}
+              transition={{
+                opacity: { duration: 0.4, delay: 0.25 + index * 0.1 },
+                scale: { duration: 0.4, delay: 0.25 + index * 0.1, type: "spring", stiffness: 260, damping: 18 },
+                rotate: { duration: ORBIT_DURATION, repeat: Infinity, ease: "linear" },
+              }}
             >
-              {member.label}
-            </div>
-          </motion.div>
-        );
-      })}
+              {/* Counter-rotates against the orbit so the label stays upright while its position travels around the ring. */}
+              <div
+                className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium sm:h-12 sm:w-12 ${
+                  member.state === "paid"
+                    ? "bg-accent text-accent-foreground"
+                    : member.state === "next"
+                      ? "border-2 border-accent bg-card text-accent"
+                      : "border border-border-strong bg-card text-muted"
+                }`}
+              >
+                {member.label}
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
     </motion.div>
   );
 }
