@@ -245,18 +245,18 @@ function CircleDetail({
         </div>
         <ul className="divide-y divide-border">
           {members.map((m, index) => (
-            <li key={m.address} className="flex items-center justify-between gap-3 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border-strong text-xs font-medium text-muted">
+            <li key={m.address} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-strong text-xs font-medium text-muted">
                   {index + 1}
                 </span>
-                <div>
-                  <p className="font-mono text-sm">{shortenAddress(m.address, 6)}</p>
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-sm">{shortenAddress(m.address, 6)}</p>
                   {m.address === address && <p className="text-xs accent-text">You</p>}
                 </div>
-                <CopyButton value={m.address} label="" />
+                <CopyButton value={m.address} label="" className="shrink-0" />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 pl-10 sm:flex-nowrap sm:gap-3 sm:pl-0">
                 {m.strikes > 0 && (
                   <span className="flex items-center gap-1 text-xs text-accent-rose">
                     <AlertTriangle size={13} />
