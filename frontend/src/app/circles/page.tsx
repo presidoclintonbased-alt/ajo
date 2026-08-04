@@ -126,7 +126,7 @@ export default function CirclesPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="eyebrow">Circles</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight">Start or join a circle</h1>
+              <h1 className="font-display mt-2 text-3xl italic tracking-tight">Start or join a circle</h1>
             </div>
             {totalCircles !== null && (
               <Badge tone="gold">{totalCircles.toString()} circles created on testnet</Badge>
