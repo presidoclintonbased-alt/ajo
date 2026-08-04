@@ -12,6 +12,7 @@ import {
   Circle,
   CircleStatus,
   ContractCallError,
+  NATIVE_TOKEN_ID,
   buildCancelCircleTx,
   buildContributeTx,
   buildDisburseTx,
@@ -22,7 +23,7 @@ import {
   missedCount,
   submitSignedTx,
 } from "@/lib/contract";
-import { formatCycleLength, formatDeadline, formatXlm, shortenAddress } from "@/lib/format";
+import { assetLabel, formatCycleLength, formatDeadline, formatXlm, shortenAddress } from "@/lib/format";
 import { rememberCircleId } from "@/lib/circle-cache";
 import { WalletError } from "@/lib/wallet";
 
@@ -252,7 +253,8 @@ function CircleDetail({
         <div>
           <p className="eyebrow">Circle #{circle.id.toString()}</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            {formatXlm(circle.contributionAmount)} XLM &middot; {formatCycleLength(circle.cycleLengthSecs)}
+            {formatXlm(circle.contributionAmount)} {assetLabel(circle.token, NATIVE_TOKEN_ID)} &middot;{" "}
+            {formatCycleLength(circle.cycleLengthSecs)}
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -303,7 +305,9 @@ function CircleDetail({
           )}
           {circle.status === CircleStatus.Active && isMember && !myRow?.paidThisCycle && (
             <Button onClick={onContribute} disabled={busy !== null}>
-              {busy === "contribute" ? "Contributing…" : `Contribute ${formatXlm(circle.contributionAmount)} XLM`}
+              {busy === "contribute"
+                ? "Contributing…"
+                : `Contribute ${formatXlm(circle.contributionAmount)} ${assetLabel(circle.token, NATIVE_TOKEN_ID)}`}
             </Button>
           )}
           {circle.status === CircleStatus.Active && (

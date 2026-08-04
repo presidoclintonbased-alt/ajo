@@ -19,6 +19,11 @@ export function shortenAddress(address: string, chars = 4): string {
   return `${address.slice(0, chars)}…${address.slice(-chars)}`;
 }
 
+/** "XLM" for the native asset, otherwise a shortened contract address — circles aren't native-only. */
+export function assetLabel(token: string, nativeTokenId: string): string {
+  return token === nativeTokenId ? "XLM" : shortenAddress(token, 5);
+}
+
 export function formatCycleLength(seconds: bigint): string {
   const s = Number(seconds);
   if (s % 604_800 === 0) {

@@ -18,7 +18,7 @@ import {
   getTotalCircles,
   submitSignedTx,
 } from "@/lib/contract";
-import { formatCycleLength, formatXlm, shortenAddress, xlmToStroops } from "@/lib/format";
+import { assetLabel, formatCycleLength, formatXlm, shortenAddress, xlmToStroops } from "@/lib/format";
 import { getKnownCircleIds, rememberCircleIds } from "@/lib/circle-cache";
 import { WalletError } from "@/lib/wallet";
 import { ContractCallError } from "@/lib/contract";
@@ -54,6 +54,8 @@ export default function CirclesPage() {
   const [amount, setAmount] = useState("10");
   const [maxMembers, setMaxMembers] = useState("4");
   const [cycleSecs, setCycleSecs] = useState(String(CYCLE_OPTIONS[1].secs));
+  const [tokenChoice, setTokenChoice] = useState<"native" | "custom">("native");
+  const [customToken, setCustomToken] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [joinId, setJoinId] = useState("");
@@ -94,12 +96,17 @@ export default function CirclesPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    const token = tokenChoice === "native" ? NATIVE_TOKEN_ID : customToken.trim();
+    if (tokenChoice === "custom" && !token) {
+      toast.error("Enter the asset's contract address.");
+      return;
+    }
     setCreating(true);
     try {
       const wallet = await ensureWallet();
       const unsignedXdr = await buildCreateCircleTx(
         wallet,
-        NATIVE_TOKEN_ID,
+        token,
         xlmToStroops(amount),
         Number(maxMembers),
         BigInt(cycleSecs),
@@ -149,8 +156,8 @@ export default function CirclesPage() {
             )}
           </div>
           <p className="mt-2 max-w-lg text-sm text-muted">
-            Circles run on Stellar testnet using native XLM. Connect a wallet when you&apos;re ready to create, join, or
-            contribute.
+            Circles run on Stellar testnet, in native XLM or any Stellar Asset Contract token. Connect a wallet when
+            you&apos;re ready to create, join, or contribute.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -158,7 +165,32 @@ export default function CirclesPage() {
               <h2 className="eyebrow">New circle</h2>
               <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-3">
                 <label className="text-sm">
-                  <span className="mb-1.5 block text-xs text-muted">Contribution per member (XLM)</span>
+                  <span className="mb-1.5 block text-xs text-muted">Asset</span>
+                  <select
+                    value={tokenChoice}
+                    onChange={(e) => setTokenChoice(e.target.value as "native" | "custom")}
+                    className="w-full rounded-xl border border-border-strong bg-background px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
+                  >
+                    <option value="native">Native XLM</option>
+                    <option value="custom">Custom Stellar Asset Contract</option>
+                  </select>
+                </label>
+                {tokenChoice === "custom" && (
+                  <label className="text-sm">
+                    <span className="mb-1.5 block text-xs text-muted">Asset contract address</span>
+                    <input
+                      required
+                      placeholder="C…"
+                      value={customToken}
+                      onChange={(e) => setCustomToken(e.target.value)}
+                      className="w-full rounded-xl border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm focus:border-accent focus:outline-none"
+                    />
+                  </label>
+                )}
+                <label className="text-sm">
+                  <span className="mb-1.5 block text-xs text-muted">
+                    Contribution per member {tokenChoice === "native" ? "(XLM)" : "(smallest-unit decimal, 7 places)"}
+                  </span>
                   <input
                     required
                     type="number"
@@ -251,7 +283,9 @@ export default function CirclesPage() {
                           <span className="eyebrow">Circle #{circle.id.toString()}</span>
                           <Badge tone={STATUS_TONE[circle.status]}>{STATUS_LABEL[circle.status]}</Badge>
                         </div>
-                        <p className="mt-3 text-lg font-semibold">{formatXlm(circle.contributionAmount)} XLM</p>
+                        <p className="mt-3 text-lg font-semibold">
+                          {formatXlm(circle.contributionAmount)} {assetLabel(circle.token, NATIVE_TOKEN_ID)}
+                        </p>
                         <p className="text-xs text-muted">{formatCycleLength(circle.cycleLengthSecs)}</p>
                         <div className="mt-4 flex items-center justify-between text-xs text-muted">
                           <span>

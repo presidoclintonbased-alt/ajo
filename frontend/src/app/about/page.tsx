@@ -78,8 +78,8 @@ export default function AboutPage() {
                 The contract is real and tested; the frontend talks to it directly, with no backend in between.
               </p>
               <p>
-                Circles currently settle in native XLM. Stablecoin-denominated circles (any Stellar Asset Contract
-                token) and a mainnet deployment are next. See{" "}
+                Circles can settle in native XLM or any Stellar Asset Contract token, including stablecoins. A
+                mainnet deployment is next. See{" "}
                 <Link href="https://github.com/presidoclintonbased-alt/ajo" className="accent-text hover:underline">
                   the README
                 </Link>{" "}

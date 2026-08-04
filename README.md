@@ -113,8 +113,6 @@ recorded), and every rejected-input case. See
 
 ## Roadmap
 
-- Support for stablecoin-denominated circles (any Stellar Asset Contract
-  token, not just native XLM).
 - Mainnet deployment.
 - Optional off-chain notifications (a cycle deadline is approaching) without
   weakening the fully on-chain trust model above.
