@@ -61,6 +61,10 @@ export default function CirclesPage() {
   const [joinId, setJoinId] = useState("");
   const [joining, setJoining] = useState(false);
 
+  useEffect(() => {
+    document.title = "Circles · Ajo";
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       const [discovered, total] = await Promise.all([discoverCircleIds(), getTotalCircles()]);

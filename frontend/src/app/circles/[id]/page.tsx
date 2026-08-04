@@ -64,6 +64,10 @@ export default function CircleDetailPage() {
   );
   const [busy, setBusy] = useState<"join" | "contribute" | "disburse" | "leave" | "cancel" | null>(null);
 
+  useEffect(() => {
+    document.title = circleId !== null ? `Circle #${circleId} · Ajo` : "Circle not found · Ajo";
+  }, [circleId]);
+
   const refresh = useCallback(async () => {
     if (circleId === null) return;
     try {
