@@ -40,12 +40,14 @@ npm run test
 npm run build
 
 cd ../sdk
+npm run lint
 npm run typecheck
 npm run test
 npm run build   # cli's file:../sdk dependency needs this dist/ to exist
 
 cd ../cli
 npm install
+npm run lint
 npm run typecheck
 npm run test
 npm run build
