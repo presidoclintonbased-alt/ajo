@@ -89,6 +89,10 @@ cp .env.example .env.local
 npm run dev
 ```
 
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for actually deploying the
+contract (there's no upgrade mechanism, so redeploying always means a new
+contract id).
+
 The app runs on `:3000`. Install [Freighter](https://www.freighter.app/),
 switch it to Stellar testnet, and fund a testnet account via
 [the Laboratory](https://laboratory.stellar.org/#account-creator?network=test)
