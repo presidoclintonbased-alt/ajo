@@ -42,48 +42,63 @@ export function Hero() {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.15 }}
-        className="mx-auto max-w-4xl px-4 pb-20 sm:px-6"
+        className="mx-auto pb-20"
       >
-        <OrbitStrip />
+        <CircleWheel />
       </motion.div>
     </section>
   );
 }
 
 const CYCLE = [
-  { label: "You", state: "paid" as const },
-  { label: "2", state: "paid" as const },
-  { label: "3", state: "next" as const },
-  { label: "4", state: "waiting" as const },
-  { label: "5", state: "waiting" as const },
+  { angle: -90, label: "You", state: "paid" as const },
+  { angle: -18, label: "2", state: "paid" as const },
+  { angle: 54, label: "3", state: "next" as const },
+  { angle: 126, label: "4", state: "waiting" as const },
+  { angle: 198, label: "5", state: "waiting" as const },
 ];
 
-function OrbitStrip() {
-  return (
-    <div className="card relative flex items-center justify-between overflow-hidden px-6 py-8 sm:px-10">
-      <div className="ring-motif pointer-events-none absolute left-1/2 top-1/2 h-[140%] w-[160%] -translate-x-1/2 -translate-y-1/2 border-accent/15" />
+function CircleWheel() {
+  const radius = 42;
 
-      {CYCLE.map((member, index) => (
-        <div key={member.label} className="relative z-10 flex flex-col items-center gap-2">
-          <div
-            className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-medium sm:h-14 sm:w-14 ${
-              member.state === "paid"
-                ? "bg-accent text-accent-foreground"
-                : member.state === "next"
-                  ? "border-2 border-accent bg-card text-accent"
-                  : "border border-border-strong bg-card text-muted"
-            }`}
-          >
-            {member.label}
-          </div>
-          <span className="eyebrow !text-[10px] !text-muted">
-            {member.state === "paid" ? "paid" : member.state === "next" ? "next" : `cycle ${index + 1}`}
-          </span>
+  return (
+    <div className="relative mx-auto aspect-square w-[min(90vw,22rem)] sm:w-[24rem]">
+      <div className="ring-motif absolute inset-0" />
+
+      <div className="card absolute inset-[32%] flex items-center justify-center text-center">
+        <div>
+          <p className="eyebrow !text-[10px]">Cycle</p>
+          <p className="font-display text-2xl italic accent-text">2 of 5</p>
         </div>
-      ))}
+      </div>
+
+      {CYCLE.map((member) => {
+        const rad = (member.angle * Math.PI) / 180;
+        const x = 50 + radius * Math.cos(rad);
+        const y = 50 + radius * Math.sin(rad);
+        return (
+          <div
+            key={member.label}
+            className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+            style={{ left: `${x}%`, top: `${y}%` }}
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium sm:h-12 sm:w-12 ${
+                member.state === "paid"
+                  ? "bg-accent text-accent-foreground"
+                  : member.state === "next"
+                    ? "border-2 border-accent bg-card text-accent"
+                    : "border border-border-strong bg-card text-muted"
+              }`}
+            >
+              {member.label}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
