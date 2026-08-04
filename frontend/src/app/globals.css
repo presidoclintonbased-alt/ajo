@@ -28,6 +28,7 @@
   --color-accent-rose: var(--accent-rose);
   --font-sans: var(--font-body);
   --font-mono: var(--font-label);
+  --font-display: var(--font-display);
 }
 
 * {

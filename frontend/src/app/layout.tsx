@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Outfit, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { WalletProvider } from "@/context/wallet-context";
 import "./globals.css";
@@ -7,6 +7,14 @@ import "./globals.css";
 const outfit = Outfit({
   variable: "--font-body",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -56,7 +64,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${outfit.variable} ${plexMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${outfit.variable} ${fraunces.variable} ${plexMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground">
         <WalletProvider>{children}</WalletProvider>
         <Toaster

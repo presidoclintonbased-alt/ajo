@@ -15,7 +15,7 @@ import { WalletError } from "@/lib/wallet";
 const NAV_LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#why-stellar", label: "Why Stellar" },
-  { href: "/#faq", label: "FAQ" },
+  { href: "/about", label: "About" },
 ];
 
 export function Navbar() {
@@ -53,38 +53,32 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
-          <LogoMark size={28} />
-          <span className="text-[16px] text-foreground">Ajo</span>
+    <header className="sticky top-0 z-50 w-full px-3 pt-3 sm:px-6 sm:pt-5">
+      <div className="card mx-auto flex max-w-4xl items-center justify-between gap-3 rounded-full px-3 py-2.5 pl-4">
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <LogoMark size={26} />
+          <span className="font-display text-[17px] italic text-foreground">Ajo</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
           {NAV_LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
-              className="rounded-full px-3.5 py-2 text-sm text-muted transition-colors hover:bg-card hover:text-foreground"
+              className="rounded-full px-3.5 py-2 text-sm text-muted transition-colors hover:bg-background hover:text-foreground"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
-          <Link
-            href="/circles"
-            className="rounded-full px-3.5 py-2 text-sm text-muted transition-colors hover:bg-card hover:text-foreground"
-          >
-            Circles
-          </Link>
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
           {address ? (
             <div ref={accountMenuRef} className="relative">
               <button
                 onClick={() => setAccountMenuOpen((open) => !open)}
                 aria-expanded={accountMenuOpen}
-                className="flex items-center gap-2 rounded-full border border-border-strong bg-card px-3.5 py-2 text-sm text-foreground transition-colors hover:bg-foreground hover:text-background"
+                className="flex items-center gap-2 rounded-full bg-background px-3.5 py-2 text-sm text-foreground transition-colors hover:opacity-80"
               >
                 <span className="h-2 w-2 rounded-full bg-accent-green" />
                 {shortenAddress(address)}
@@ -118,6 +112,12 @@ export function Navbar() {
               {connecting ? "Connecting…" : "Connect wallet"}
             </Button>
           )}
+          <Link
+            href="/circles"
+            className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-85"
+          >
+            Circles
+          </Link>
         </div>
 
         <button
@@ -132,15 +132,15 @@ export function Navbar() {
 
       {menuOpen && (
         <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="border-t border-border px-4 py-4 md:hidden"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card mx-auto mt-2 max-w-4xl px-4 py-4 md:hidden"
         >
           <nav className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
-              <a key={link.href} href={link.href} className="rounded-full px-3.5 py-2 text-sm text-muted hover:text-foreground">
+              <Link key={link.href} href={link.href} className="rounded-full px-3.5 py-2 text-sm text-muted hover:text-foreground">
                 {link.label}
-              </a>
+              </Link>
             ))}
             <Link href="/circles" className="rounded-full px-3.5 py-2 text-sm text-muted hover:text-foreground">
               Circles
