@@ -261,9 +261,13 @@ export default function CirclesPage() {
               {loadError ? (
                 <Card className="p-6 text-sm text-accent-rose">{loadError}</Card>
               ) : circles === null ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  role="status"
+                  aria-label="Loading circles"
+                >
                   {[0, 1, 2].map((i) => (
-                    <Card key={i} className="h-[136px] animate-pulse p-5">
+                    <Card key={i} className="h-[136px] animate-pulse p-5" aria-hidden="true">
                       <div className="h-3 w-20 rounded-full bg-border" />
                       <div className="mt-4 h-5 w-24 rounded-full bg-border" />
                       <div className="mt-2 h-3 w-16 rounded-full bg-border" />

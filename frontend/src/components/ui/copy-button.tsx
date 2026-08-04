@@ -12,6 +12,9 @@ interface CopyButtonProps {
 
 export function CopyButton({ value, label = "Copy", className }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  // An empty label means icon-only — those still need a real accessible
+  // name, since the visible text a sighted user relies on isn't there.
+  const isIconOnly = label === "";
 
   async function handleCopy() {
     await navigator.clipboard.writeText(value);
@@ -23,10 +26,15 @@ export function CopyButton({ value, label = "Copy", className }: CopyButtonProps
     <button
       type="button"
       onClick={handleCopy}
+      aria-label={isIconOnly ? (copied ? "Copied to clipboard" : "Copy to clipboard") : undefined}
       className={cn("inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground", className)}
     >
-      {copied ? <Check size={13} className="text-accent-green" /> : <Copy size={13} />}
-      {copied ? "Copied" : label}
+      {copied ? (
+        <Check size={13} className="text-accent-green" aria-hidden="true" />
+      ) : (
+        <Copy size={13} aria-hidden="true" />
+      )}
+      {!isIconOnly && (copied ? "Copied" : label)}
     </button>
   );
 }
