@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fbf6ee;
+  --foreground: #241c15;
+  --muted: #8a7a68;
+  --border: #ece1cf;
+  --border-strong: #d8c7ab;
+  --card: #fffcf6;
+  --accent: #c2410c;
+  --accent-foreground: #fffaf3;
+  --accent-gold: #b45309;
+  --accent-green: #15803d;
+  --accent-rose: #9f1239;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-card: var(--card);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-gold: var(--accent-gold);
+  --color-accent-green: var(--accent-green);
+  --color-accent-rose: var(--accent-rose);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-label);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fffaf3;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Soft dot-grid texture — warmer and rounder than a hairline grid. */
+.dot-grid {
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -11px -11px;
+}
+
+/* Small mono label, e.g. "01 — HOW IT WORKS" above a headline. */
+.eyebrow {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Warm, rounded card — the primitive used everywhere instead of a flat panel. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 2px rgba(36, 28, 21, 0.04), 0 8px 24px -12px rgba(36, 28, 21, 0.08);
+}
+
+.accent-text {
+  color: var(--accent);
+}
+
+/* A ring of dots — the "rotating circle" motif used in the hero and icons. */
+.ring-motif {
+  border-radius: 9999px;
+  border: 1.5px dashed var(--border-strong);
+}

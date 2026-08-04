@@ -1,0 +1,195 @@
+import {
+  Account,
+  Address,
+  Contract,
+  Keypair,
+  TransactionBuilder,
+  BASE_FEE,
+  nativeToScVal,
+  scValToNative,
+  rpc,
+  xdr,
+} from "@stellar/stellar-sdk";
+
+const RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
+const NETWORK_PASSPHRASE =
+  process.env.NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+const CONTRACT_ID = process.env.NEXT_PUBLIC_AJO_CONTRACT_ID ?? "";
+export const NATIVE_TOKEN_ID = process.env.NEXT_PUBLIC_NATIVE_TOKEN_ID ?? "";
+
+export const server = new rpc.Server(RPC_URL);
+const contract = new Contract(CONTRACT_ID);
+
+export enum CircleStatus {
+  Forming = 0,
+  Active = 1,
+  Completed = 2,
+}
+
+export interface Circle {
+  id: bigint;
+  creator: string;
+  token: string;
+  contributionAmount: bigint;
+  maxMembers: number;
+  cycleLengthSecs: bigint;
+  members: string[];
+  startedAt: bigint;
+  currentCycle: number;
+  status: CircleStatus;
+}
+
+// Raw shape returned by scValToNative for the Rust `Circle` struct —
+// soroban-sdk maps struct field names verbatim (snake_case) into the
+// decoded object's keys.
+interface RawCircle {
+  id: bigint;
+  creator: string;
+  token: string;
+  contribution_amount: bigint;
+  max_members: number;
+  cycle_length_secs: bigint;
+  members: string[];
+  started_at: bigint;
+  current_cycle: number;
+  status: number;
+}
+
+function parseCircle(raw: RawCircle): Circle {
+  return {
+    id: raw.id,
+    creator: raw.creator,
+    token: raw.token,
+    contributionAmount: raw.contribution_amount,
+    maxMembers: raw.max_members,
+    cycleLengthSecs: raw.cycle_length_secs,
+    members: raw.members,
+    startedAt: raw.started_at,
+    currentCycle: raw.current_cycle,
+    status: raw.status as CircleStatus,
+  };
+}
+
+export class ContractCallError extends Error {}
+
+/** Read-only call, simulated against a throwaway account — no wallet or funds required. */
+async function readCall<T>(method: string, args: xdr.ScVal[]): Promise<T> {
+  const account = new Account(Keypair.random().publicKey(), "0");
+  const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(contract.call(method, ...args))
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new ContractCallError(sim.error);
+  }
+  return scValToNative(sim.result!.retval) as T;
+}
+
+export async function getCircle(circleId: bigint): Promise<Circle> {
+  const raw = await readCall<RawCircle>("get_circle", [nativeToScVal(circleId, { type: "u64" })]);
+  return parseCircle(raw);
+}
+
+export async function hasContributed(circleId: bigint, cycle: number, member: string): Promise<boolean> {
+  return readCall<boolean>("has_contributed", [
+    nativeToScVal(circleId, { type: "u64" }),
+    nativeToScVal(cycle, { type: "u32" }),
+    new Address(member).toScVal(),
+  ]);
+}
+
+export async function missedCount(circleId: bigint, member: string): Promise<number> {
+  return readCall<number>("missed_count", [
+    nativeToScVal(circleId, { type: "u64" }),
+    new Address(member).toScVal(),
+  ]);
+}
+
+/** Build an unsigned, simulated-and-assembled transaction ready for a wallet to sign. */
+async function buildTx(sourcePublicKey: string, method: string, args: xdr.ScVal[]) {
+  const account = await server.getAccount(sourcePublicKey);
+  const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(contract.call(method, ...args))
+    .setTimeout(60)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new ContractCallError(sim.error);
+  }
+  return rpc.assembleTransaction(tx, sim).build().toXDR();
+}
+
+export function buildCreateCircleTx(
+  creator: string,
+  token: string,
+  contributionAmount: bigint,
+  maxMembers: number,
+  cycleLengthSecs: bigint,
+) {
+  return buildTx(creator, "create_circle", [
+    new Address(creator).toScVal(),
+    new Address(token).toScVal(),
+    nativeToScVal(contributionAmount, { type: "i128" }),
+    nativeToScVal(maxMembers, { type: "u32" }),
+    nativeToScVal(cycleLengthSecs, { type: "u64" }),
+  ]);
+}
+
+export function buildJoinCircleTx(circleId: bigint, member: string) {
+  return buildTx(member, "join_circle", [
+    nativeToScVal(circleId, { type: "u64" }),
+    new Address(member).toScVal(),
+  ]);
+}
+
+export function buildContributeTx(circleId: bigint, member: string) {
+  return buildTx(member, "contribute", [
+    nativeToScVal(circleId, { type: "u64" }),
+    new Address(member).toScVal(),
+  ]);
+}
+
+export function buildDisburseTx(circleId: bigint, caller: string) {
+  return buildTx(caller, "disburse", [nativeToScVal(circleId, { type: "u64" })]);
+}
+
+/** Submit a wallet-signed transaction XDR and poll until it lands. */
+export async function submitSignedTx(signedXdr: string): Promise<void> {
+  const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+  const sent = await server.sendTransaction(tx);
+  if (sent.status === "ERROR") {
+    throw new ContractCallError(`Transaction rejected: ${JSON.stringify(sent.errorResult)}`);
+  }
+
+  let result = await server.getTransaction(sent.hash);
+  while (result.status === "NOT_FOUND") {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    result = await server.getTransaction(sent.hash);
+  }
+  if (result.status !== "SUCCESS") {
+    throw new ContractCallError(`Transaction failed: ${JSON.stringify(result)}`);
+  }
+}
+
+/** Discover circle ids by reading `circle created` events — no backend or indexer required. */
+export async function discoverCircleIds(limit = 50): Promise<bigint[]> {
+  const latest = await server.getLatestLedger();
+  const startLedger = Math.max(latest.sequence - 17_280 * 7, 1); // ~7 days of testnet ledgers
+
+  const res = await server.getEvents({
+    startLedger,
+    filters: [
+      {
+        type: "contract",
+        contractIds: [CONTRACT_ID],
+        topics: [[xdr.ScVal.scvSymbol("circle").toXDR("base64"), xdr.ScVal.scvSymbol("created").toXDR("base64")]],
+      },
+    ],
+    limit,
+  });
+
+  return res.events.map((e) => scValToNative(e.value) as bigint).reverse();
+}
