@@ -5,6 +5,7 @@
 ```
 contracts/    Soroban contract (Rust) — ajo-circle
 frontend/     Next.js web app — landing page + the app itself
+sdk/          @ajo/sdk — the same client logic, packaged for third parties
 ```
 
 There is no backend. The frontend talks to the deployed contract directly
@@ -34,6 +35,12 @@ cd contracts && cargo test --workspace
 cd ../frontend
 npm run lint
 npm run typecheck
+npm run test
+npm run build
+
+cd ../sdk
+npm run typecheck
+npm run test
 npm run build
 ```
 

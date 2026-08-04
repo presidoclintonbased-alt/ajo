@@ -68,6 +68,8 @@ contracts/     Soroban contract (Rust) — circle creation, join, contribute,
 frontend/       Next.js web app — landing page and the app itself (create,
                 join, contribute, trigger payout). Talks to the contract
                 directly; no backend.
+sdk/            @ajo/sdk — the same non-custodial client logic that backs
+                the frontend, packaged for any third-party app to use.
 ```
 
 ## Quick start
@@ -106,14 +108,22 @@ before creating or joining a circle.
 |---|---|
 | `create_circle` | Starts a new circle; the creator is its first member. |
 | `join_circle` | Joins a forming circle. Auto-activates once full. |
+| `leave_circle` | A member backs out while still `Forming` — no funds are ever at risk here. |
+| `cancel_circle` | Creator closes out a circle that never filled. |
 | `contribute` | Pays this cycle's contribution into the pot. |
 | `disburse` | Pays out the current cycle's recipient once everyone's paid, or the deadline passes. Callable by anyone — no privileged keeper. |
-| `get_circle` / `has_contributed` / `missed_count` | Read-only state, including a per-member missed-contribution strike count. |
+| `get_circle` / `has_contributed` / `missed_count` / `total_circles` | Read-only state, including a per-member missed-contribution strike count. |
 
-12 unit tests cover the full rotation (every member paid exactly once,
-circle completion), the missed-deadline path (partial payout, strike
-recorded), and every rejected-input case. See
-`contracts/ajo-circle/src/test.rs`.
+21 unit tests cover the full rotation (every member paid exactly once,
+circle completion, including a 10-member circle), the missed-deadline path
+(partial payout, strikes accumulating across repeated misses), leave/cancel,
+and every rejected-input case. See `contracts/ajo-circle/src/test.rs`.
+
+## SDK
+
+`sdk/` — the same client logic that backs the frontend, packaged as
+`@ajo/sdk` for any third-party app to integrate with directly. See
+[sdk/README.md](./sdk/README.md).
 
 ## Roadmap
 

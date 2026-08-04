@@ -2,7 +2,7 @@
 
 ## Which package(s)?
 
-<!-- contracts / frontend -->
+<!-- contracts / frontend / sdk -->
 
 ## Related issue
 
