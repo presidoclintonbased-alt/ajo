@@ -58,7 +58,9 @@ contract directly over Stellar RPC, and a connected wallet (e.g.
 Even circle discovery — "what circles exist?" — is read from the contract's
 own on-chain event log rather than an indexer database, so there's no
 off-chain system whose downtime or dishonesty the trust model has to route
-around.
+around. See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the reasoning
+behind this and a few other deliberate design choices (join order as payout
+order, the missed-deadline partial-payout behavior).
 
 ```
 contracts/     Soroban contract (Rust) — circle creation, join, contribute,

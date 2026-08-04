@@ -28,6 +28,7 @@ export function Footer() {
             <div>
               <h3 className="eyebrow">Project</h3>
               <ul className="mt-3 space-y-2 text-sm text-muted">
+                <li><Link href="/about" className="hover:text-foreground">About</Link></li>
                 <li><a href="https://github.com/presidoclintonbased-alt/ajo" className="hover:text-foreground">GitHub</a></li>
                 <li><Link href="/#faq" className="hover:text-foreground">FAQ</Link></li>
               </ul>
