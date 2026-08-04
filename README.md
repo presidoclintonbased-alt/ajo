@@ -21,7 +21,7 @@ contribution schedule, and pays out automatically — trustless by
 construction, not by promise.
 
 - **Network:** Stellar / Soroban, testnet
-- **License:** MIT
+
 
 ## How it works
 
