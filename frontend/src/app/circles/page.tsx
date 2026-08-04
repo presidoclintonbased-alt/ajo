@@ -15,6 +15,7 @@ import {
   buildJoinCircleTx,
   discoverCircleIds,
   getCircle,
+  getTotalCircles,
   submitSignedTx,
 } from "@/lib/contract";
 import { formatCycleLength, formatXlm, shortenAddress, xlmToStroops } from "@/lib/format";
@@ -45,6 +46,7 @@ export default function CirclesPage() {
 
   const [circles, setCircles] = useState<Circle[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [totalCircles, setTotalCircles] = useState<bigint | null>(null);
 
   const [amount, setAmount] = useState("10");
   const [maxMembers, setMaxMembers] = useState("4");
@@ -56,9 +58,10 @@ export default function CirclesPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const ids = await discoverCircleIds();
+      const [ids, total] = await Promise.all([discoverCircleIds(), getTotalCircles()]);
       const loaded = await Promise.all(ids.map((id) => getCircle(id)));
       setCircles(loaded);
+      setTotalCircles(total);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not load circles.");
     }
@@ -120,8 +123,15 @@ export default function CirclesPage() {
       <Navbar />
       <main className="flex-1">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <p className="eyebrow">Circles</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Start or join a circle</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">Circles</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">Start or join a circle</h1>
+            </div>
+            {totalCircles !== null && (
+              <Badge tone="gold">{totalCircles.toString()} circles created on testnet</Badge>
+            )}
+          </div>
           <p className="mt-2 max-w-lg text-sm text-muted">
             Circles run on Stellar testnet using native XLM. Connect a wallet when you&apos;re ready to create, join, or
             contribute.

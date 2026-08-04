@@ -107,6 +107,10 @@ export async function missedCount(circleId: bigint, member: string): Promise<num
   ]);
 }
 
+export async function getTotalCircles(): Promise<bigint> {
+  return readCall<bigint>("total_circles", []);
+}
+
 /** Build an unsigned, simulated-and-assembled transaction ready for a wallet to sign. */
 async function buildTx(sourcePublicKey: string, method: string, args: xdr.ScVal[]) {
   const account = await server.getAccount(sourcePublicKey);
