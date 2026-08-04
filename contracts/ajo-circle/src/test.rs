@@ -305,3 +305,98 @@ fn total_circles_tracks_the_running_count() {
     client.create_circle(&a, &token, &2_000, &3, &WEEK);
     assert_eq!(client.total_circles(), 2);
 }
+
+#[test]
+fn a_member_can_leave_a_forming_circle() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+    let c = Address::generate(&env);
+
+    let id = client.create_circle(&a, &token, &1_000, &4, &WEEK);
+    client.join_circle(&id, &b);
+    client.join_circle(&id, &c);
+
+    client.leave_circle(&id, &b);
+
+    let circle = client.get_circle(&id);
+    assert_eq!(circle.members.len(), 2);
+    assert_eq!(circle.members.get(0).unwrap(), a);
+    assert_eq!(circle.members.get(1).unwrap(), c);
+    assert_eq!(circle.status, CircleStatus::Forming);
+
+    // The freed slot can be re-joined.
+    client.join_circle(&id, &b);
+    assert_eq!(client.get_circle(&id).members.len(), 3);
+}
+
+#[test]
+fn rejects_leaving_a_circle_you_are_not_in_or_that_is_already_active() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+    let outsider = Address::generate(&env);
+
+    let id = client.create_circle(&a, &token, &1_000, &2, &WEEK);
+
+    assert_eq!(
+        client.try_leave_circle(&id, &outsider),
+        Err(Ok(ContractError::NotAMember))
+    );
+
+    client.join_circle(&id, &b); // circle fills and activates
+    assert_eq!(
+        client.try_leave_circle(&id, &a),
+        Err(Ok(ContractError::CircleNotForming))
+    );
+}
+
+#[test]
+fn the_creator_can_cancel_a_forming_circle() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+
+    let id = client.create_circle(&a, &token, &1_000, &3, &WEEK);
+    client.join_circle(&id, &b);
+
+    client.cancel_circle(&id, &a);
+
+    let circle = client.get_circle(&id);
+    assert_eq!(circle.status, CircleStatus::Cancelled);
+
+    // A cancelled circle can no longer be joined.
+    let c = Address::generate(&env);
+    assert_eq!(
+        client.try_join_circle(&id, &c),
+        Err(Ok(ContractError::CircleNotForming))
+    );
+}
+
+#[test]
+fn rejects_cancellation_by_a_non_creator_or_of_an_active_circle() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+
+    let id = client.create_circle(&a, &token, &1_000, &2, &WEEK);
+
+    assert_eq!(
+        client.try_cancel_circle(&id, &b),
+        Err(Ok(ContractError::NotAuthorized))
+    );
+
+    client.join_circle(&id, &b); // circle fills and activates
+    assert_eq!(
+        client.try_cancel_circle(&id, &a),
+        Err(Ok(ContractError::CircleNotForming))
+    );
+}

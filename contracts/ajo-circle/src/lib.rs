@@ -22,6 +22,7 @@ pub enum CircleStatus {
     Forming = 0,
     Active = 1,
     Completed = 2,
+    Cancelled = 3,
 }
 
 #[contracttype]
@@ -63,6 +64,7 @@ pub enum ContractError {
     AlreadyContributed = 7,
     CycleNotReady = 8,
     InvalidParams = 9,
+    NotAuthorized = 10,
 }
 
 #[contract]
@@ -137,6 +139,52 @@ impl AjoCircleContract {
 
         env.events()
             .publish((symbol_short!("circle"), symbol_short!("joined")), circle_id);
+
+        Ok(())
+    }
+
+    /// A member backs out of a circle that hasn't filled yet. No funds are
+    /// ever at risk here — `contribute` only works on an `Active` circle,
+    /// so a `Forming` member has never paid in anything to get back.
+    pub fn leave_circle(env: Env, circle_id: u64, member: Address) -> Result<(), ContractError> {
+        member.require_auth();
+
+        let mut circle = Self::get_circle(env.clone(), circle_id)?;
+        if circle.status != CircleStatus::Forming {
+            return Err(ContractError::CircleNotForming);
+        }
+
+        let index = member_index(&circle.members, &member).ok_or(ContractError::NotAMember)?;
+        circle.members.remove(index);
+
+        env.storage().persistent().set(&DataKey::Circle(circle_id), &circle);
+
+        env.events()
+            .publish((symbol_short!("circle"), symbol_short!("left")), circle_id);
+
+        Ok(())
+    }
+
+    /// The creator closes out a circle that never filled. Only the creator
+    /// can call this, and only before the circle is `Active` — once it's
+    /// active, members have already contributed and disburse's missed-
+    /// deadline path is the mechanism for keeping funds unstuck, not this.
+    pub fn cancel_circle(env: Env, circle_id: u64, caller: Address) -> Result<(), ContractError> {
+        caller.require_auth();
+
+        let mut circle = Self::get_circle(env.clone(), circle_id)?;
+        if circle.status != CircleStatus::Forming {
+            return Err(ContractError::CircleNotForming);
+        }
+        if caller != circle.creator {
+            return Err(ContractError::NotAuthorized);
+        }
+
+        circle.status = CircleStatus::Cancelled;
+        env.storage().persistent().set(&DataKey::Circle(circle_id), &circle);
+
+        env.events()
+            .publish((symbol_short!("circle"), symbol_short!("cancel")), circle_id);
 
         Ok(())
     }
@@ -261,12 +309,16 @@ impl AjoCircleContract {
 }
 
 fn is_member(members: &Vec<Address>, addr: &Address) -> bool {
-    for m in members.iter() {
+    member_index(members, addr).is_some()
+}
+
+fn member_index(members: &Vec<Address>, addr: &Address) -> Option<u32> {
+    for (i, m) in members.iter().enumerate() {
         if &m == addr {
-            return true;
+            return Some(i as u32);
         }
     }
-    false
+    None
 }
 
 fn next_id(env: &Env, key: DataKey) -> u64 {
