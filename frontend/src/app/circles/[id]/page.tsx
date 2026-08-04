@@ -40,17 +40,26 @@ interface MemberRow {
   strikes: number;
 }
 
+/** Route params are arbitrary strings — only accept a non-negative integer as a circle id. */
+function parseCircleId(raw: string): bigint | null {
+  if (!/^\d+$/.test(raw)) return null;
+  return BigInt(raw);
+}
+
 export default function CircleDetailPage() {
   const params = useParams<{ id: string }>();
-  const circleId = BigInt(params.id);
+  const circleId = parseCircleId(params.id);
   const { address, connectWallet, signTransaction } = useWallet();
 
   const [circle, setCircle] = useState<Circle | null>(null);
   const [members, setMembers] = useState<MemberRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    circleId === null ? `"${params.id}" isn't a valid circle id.` : null,
+  );
   const [busy, setBusy] = useState<"join" | "contribute" | "disburse" | null>(null);
 
   const refresh = useCallback(async () => {
+    if (circleId === null) return;
     try {
       const loaded = await getCircle(circleId);
       setCircle(loaded);
@@ -82,6 +91,7 @@ export default function CircleDetailPage() {
   }
 
   async function handleJoin() {
+    if (circleId === null) return;
     setBusy("join");
     try {
       const wallet = await ensureWallet();
@@ -98,6 +108,7 @@ export default function CircleDetailPage() {
   }
 
   async function handleContribute() {
+    if (circleId === null) return;
     setBusy("contribute");
     try {
       const wallet = await ensureWallet();
@@ -114,6 +125,7 @@ export default function CircleDetailPage() {
   }
 
   async function handleDisburse() {
+    if (circleId === null) return;
     setBusy("disburse");
     try {
       const wallet = await ensureWallet();
