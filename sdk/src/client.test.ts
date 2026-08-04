@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AjoClient, AjoContractError, CircleStatus } from "./client";
+import { AjoClient, AjoContractError, CircleStatus, minLedgerFromRangeError } from "./client";
 
 describe("AjoContractError", () => {
   it("is a real Error subclass with a stable name for narrowing", () => {
@@ -19,6 +19,21 @@ describe("CircleStatus", () => {
     expect(CircleStatus.Active).toBe(1);
     expect(CircleStatus.Completed).toBe(2);
     expect(CircleStatus.Cancelled).toBe(3);
+  });
+});
+
+describe("minLedgerFromRangeError", () => {
+  it("extracts the lower bound from a real Soroban RPC range error", () => {
+    const err = { code: -32600, message: "startLedger must be within the ledger range: 3846337 - 3967296" };
+    expect(minLedgerFromRangeError(err)).toBe(3846337);
+  });
+
+  it("returns null for an unrelated error", () => {
+    expect(minLedgerFromRangeError(new Error("network timeout"))).toBeNull();
+  });
+
+  it("handles a plain string error", () => {
+    expect(minLedgerFromRangeError("ledger range: 100 - 200")).toBe(100);
   });
 });
 

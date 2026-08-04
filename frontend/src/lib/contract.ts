@@ -193,22 +193,57 @@ export async function submitSignedTx(signedXdr: string): Promise<void> {
   }
 }
 
-/** Discover circle ids by reading `circle created` events — no backend or indexer required. */
-export async function discoverCircleIds(limit = 50): Promise<bigint[]> {
+/**
+ * Discover circle ids by reading `circle created` events — no backend or
+ * indexer required.
+ *
+ * The default lookback (9,000 ledgers, ~12.5h) is deliberately far short of
+ * the RPC node's much larger nominal retention window (~120,960 ledgers,
+ * ~7 days). Empirically, a public Soroban RPC node accepts a `startLedger`
+ * anywhere inside that whole retention window without erroring, but
+ * silently returns zero events — not an error, just an empty result — once
+ * the requested span exceeds a much smaller *searchable* window (observed
+ * between 10,000 and 12,000 ledgers). Retention and searchability turned
+ * out not to be the same guarantee; only the latter matters here. Circles
+ * older than this lookback still resolve fine by id — getCircle reads
+ * contract storage directly, not events — see lib/circle-cache.ts for how
+ * this page still finds them.
+ */
+export async function discoverCircleIds(lookbackLedgers = 9_000, limit = 50): Promise<bigint[]> {
   const latest = await server.getLatestLedger();
-  const startLedger = Math.max(latest.sequence - 17_280 * 7, 1); // ~7 days of testnet ledgers
+  const startLedger = Math.max(latest.sequence - lookbackLedgers, 1);
 
-  const res = await server.getEvents({
-    startLedger,
-    filters: [
-      {
-        type: "contract",
-        contractIds: [CONTRACT_ID],
-        topics: [[xdr.ScVal.scvSymbol("circle").toXDR("base64"), xdr.ScVal.scvSymbol("created").toXDR("base64")]],
-      },
-    ],
-    limit,
-  });
+  const fetchEvents = (from: number) =>
+    server.getEvents({
+      startLedger: from,
+      filters: [
+        {
+          type: "contract",
+          contractIds: [CONTRACT_ID],
+          topics: [[xdr.ScVal.scvSymbol("circle").toXDR("base64"), xdr.ScVal.scvSymbol("created").toXDR("base64")]],
+        },
+      ],
+      limit,
+    });
+
+  let res;
+  try {
+    res = await fetchEvents(startLedger);
+  } catch (err) {
+    const min = minLedgerFromRangeError(err);
+    if (min === null) throw err;
+    res = await fetchEvents(min);
+  }
 
   return res.events.map((e) => scValToNative(e.value) as bigint).reverse();
+}
+
+/** Extracts the lower bound from a Soroban RPC "startLedger must be within the ledger range: X - Y" error. */
+function minLedgerFromRangeError(err: unknown): number | null {
+  const message =
+    typeof err === "object" && err !== null && "message" in err
+      ? String((err as { message: unknown }).message)
+      : String(err);
+  const match = /ledger range:\s*(\d+)/.exec(message);
+  return match ? Number(match[1]) : null;
 }

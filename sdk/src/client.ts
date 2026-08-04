@@ -128,22 +128,55 @@ export class AjoClient {
     return this.readCall<bigint>("total_circles", []);
   }
 
-  /** Reads `(circle, created)` events from the contract's own log — no indexer required. */
-  async discoverCircleIds(lookbackLedgers = 17_280 * 7, limit = 50): Promise<bigint[]> {
+  /**
+   * Reads `(circle, created)` events from the contract's own log — no
+   * indexer required.
+   *
+   * The default lookback (9,000 ledgers, ~12.5h at ~5s/ledger) is deliberately
+   * far short of the ~120,960-ledger (~7 day) window the RPC node reports as
+   * its retention floor. Empirically, public Soroban RPC nodes accept a
+   * `startLedger` anywhere inside that whole retention window without
+   * erroring, but silently return zero events — not an error, just an empty
+   * result — once the requested span exceeds a much smaller *searchable*
+   * window (somewhere between 10,000 and 12,000 ledgers on the node this was
+   * tested against). Retention and searchability are not the same guarantee;
+   * only the latter actually matters here. Circles older than this lookback
+   * still resolve fine by id — `getCircle` reads contract storage directly,
+   * not events — they just won't surface from a cold discovery scan.
+   */
+  async discoverCircleIds(lookbackLedgers = 9_000, limit = 50): Promise<bigint[]> {
     const latest = await this.server.getLatestLedger();
     const startLedger = Math.max(latest.sequence - lookbackLedgers, 1);
 
-    const res = await this.server.getEvents({
-      startLedger,
-      filters: [
-        {
-          type: "contract",
-          contractIds: [this.contractId],
-          topics: [[xdr.ScVal.scvSymbol("circle").toXDR("base64"), xdr.ScVal.scvSymbol("created").toXDR("base64")]],
-        },
-      ],
-      limit,
-    });
+    const fetchEvents = (from: number) =>
+      this.server.getEvents({
+        startLedger: from,
+        filters: [
+          {
+            type: "contract",
+            contractIds: [this.contractId],
+            topics: [
+              [xdr.ScVal.scvSymbol("circle").toXDR("base64"), xdr.ScVal.scvSymbol("created").toXDR("base64")],
+            ],
+          },
+        ],
+        limit,
+      });
+
+    let res;
+    try {
+      res = await fetchEvents(startLedger);
+    } catch (err) {
+      // The RPC node's actual retention floor can advance past what we
+      // computed from getLatestLedger() by the time getEvents() runs —
+      // ledgers keep closing in between the two calls, and public nodes
+      // often retain fewer ledgers than a naive "N days at ~5s/ledger"
+      // estimate assumes. Retry once against the floor the server itself
+      // reports rather than guessing a smaller lookback.
+      const min = minLedgerFromRangeError(err);
+      if (min === null) throw err;
+      res = await fetchEvents(min);
+    }
 
     return res.events.map((e) => scValToNative(e.value) as bigint).reverse();
   }
@@ -244,4 +277,14 @@ export class AjoClient {
     }
     return rpc.assembleTransaction(tx, sim).build().toXDR();
   }
+}
+
+/** Extracts the lower bound from a Soroban RPC "startLedger must be within the ledger range: X - Y" error. */
+export function minLedgerFromRangeError(err: unknown): number | null {
+  const message =
+    typeof err === "object" && err !== null && "message" in err
+      ? String((err as { message: unknown }).message)
+      : String(err);
+  const match = /ledger range:\s*(\d+)/.exec(message);
+  return match ? Number(match[1]) : null;
 }
