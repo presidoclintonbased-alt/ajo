@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCycleLength, formatDeadline, formatXlm, shortenAddress, xlmToStroops } from "./format";
+import { assetLabel, formatCycleLength, formatDeadline, formatXlm, shortenAddress, xlmToStroops } from "./format";
 
 describe("formatXlm", () => {
   it("formats a whole number of stroops with no decimal point", () => {
@@ -27,6 +27,27 @@ describe("xlmToStroops", () => {
 
   it("round-trips through formatXlm", () => {
     expect(formatXlm(xlmToStroops("3.25"))).toBe("3.25");
+  });
+
+  it("truncates precision beyond 7 decimal places instead of rounding", () => {
+    expect(xlmToStroops("1.123456789")).toBe(11_234_567n);
+  });
+
+  it("treats a bare decimal point as zero", () => {
+    expect(xlmToStroops(".")).toBe(0n);
+  });
+});
+
+describe("assetLabel", () => {
+  const nativeTokenId = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+  const otherToken = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
+
+  it("labels the native token as XLM", () => {
+    expect(assetLabel(nativeTokenId, nativeTokenId)).toBe("XLM");
+  });
+
+  it("shortens a non-native token's contract address", () => {
+    expect(assetLabel(otherToken, nativeTokenId)).toBe(shortenAddress(otherToken, 5));
   });
 });
 
