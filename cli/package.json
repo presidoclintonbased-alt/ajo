@@ -19,7 +19,7 @@
   "dependencies": {
     "@ajo/sdk": "file:../sdk",
     "@stellar/stellar-sdk": "^16.2.0",
-    "commander": "^13.1.0"
+    "commander": "^15.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
