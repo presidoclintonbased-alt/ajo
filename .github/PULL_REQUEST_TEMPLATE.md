@@ -15,7 +15,7 @@ Closes #
 ## Checklist
 
 - [ ] `cargo test --workspace` passes (if `contracts/` changed)
-- [ ] `npm run lint` passes (if `frontend/` changed)
-- [ ] `npm run typecheck` passes (if `frontend/` changed)
-- [ ] `npm run build` passes (if `frontend/` changed)
+- [ ] `npm run lint` / `typecheck` / `test` / `build` pass (if `frontend/` changed)
+- [ ] `npm run lint` / `typecheck` / `test` / `build` pass (if `sdk/` changed)
+- [ ] `npm run lint` / `typecheck` / `test` / `build` pass (if `cli/` changed)
 - [ ] No secrets, `.env` files, or credentials included in the diff
