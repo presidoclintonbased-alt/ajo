@@ -18,7 +18,9 @@ const CONTRACT_ID = process.env.NEXT_PUBLIC_AJO_CONTRACT_ID ?? "";
 export const NATIVE_TOKEN_ID = process.env.NEXT_PUBLIC_NATIVE_TOKEN_ID ?? "";
 
 export const server = new rpc.Server(RPC_URL);
-const contract = new Contract(CONTRACT_ID);
+function getContract() {
+  return new Contract(CONTRACT_ID);
+}
 
 export enum CircleStatus {
   Forming = 0,
@@ -77,7 +79,7 @@ export class ContractCallError extends Error {}
 async function readCall<T>(method: string, args: xdr.ScVal[]): Promise<T> {
   const account = new Account(Keypair.random().publicKey(), "0");
   const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
-    .addOperation(contract.call(method, ...args))
+    .addOperation(getContract().call(method, ...args))
     .setTimeout(30)
     .build();
 
@@ -116,7 +118,7 @@ export async function getTotalCircles(): Promise<bigint> {
 async function buildTx(sourcePublicKey: string, method: string, args: xdr.ScVal[]) {
   const account = await server.getAccount(sourcePublicKey);
   const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
-    .addOperation(contract.call(method, ...args))
+    .addOperation(getContract().call(method, ...args))
     .setTimeout(60)
     .build();
 
