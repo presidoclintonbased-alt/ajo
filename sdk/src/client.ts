@@ -240,10 +240,14 @@ export class AjoClient {
       throw new AjoContractError(`Transaction rejected: ${JSON.stringify(sent.errorResult)}`);
     }
 
+    const maxAttempts = 40; // ~60s at 1.5s/poll — a dropped tx should never hang the caller forever
     let result = await this.server.getTransaction(sent.hash);
-    while (result.status === "NOT_FOUND") {
+    for (let attempt = 0; result.status === "NOT_FOUND" && attempt < maxAttempts; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       result = await this.server.getTransaction(sent.hash);
+    }
+    if (result.status === "NOT_FOUND") {
+      throw new AjoContractError(`Transaction ${sent.hash} was not found on-chain after ${maxAttempts} polls — it may have been dropped.`);
     }
     if (result.status !== "SUCCESS") {
       throw new AjoContractError(`Transaction failed: ${JSON.stringify(result)}`);
