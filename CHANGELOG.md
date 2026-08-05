@@ -21,6 +21,12 @@ versioned releases yet — everything below is unreleased, testnet-only work.
   issue/PR templates, CI (contract tests + frontend lint/typecheck/test/build).
 - `docs/ARCHITECTURE.md` — the reasoning behind the no-backend design, join
   order as payout order, and the missed-deadline partial-payout behavior.
+- Repo hygiene: `.editorconfig`, `.nvmrc`, `CODEOWNERS`, Dependabot config
+  (npm, cargo, GitHub Actions), a CI concurrency group so overlapping
+  pushes cancel the stale run instead of racing it.
+- `frontend`: `robots.ts` / `sitemap.ts`, and baseline response security
+  headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`).
 
 ### Fixed
 - CI referenced `npm run typecheck` in the frontend job, but the script
@@ -29,6 +35,14 @@ versioned releases yet — everything below is unreleased, testnet-only work.
   the same dark-section convention as other projects rather than Ajo's own
   identity; replaced with the terracotta accent used throughout the rest of
   the site.
+- `frontend` typecheck ran `tsc` before `next build` generated `.next/types`,
+  so `layout.tsx`'s `LayoutProps<"/">` reference failed CI on every push
+  since typed layout props landed; replaced with an explicit `ReactNode` prop
+  type that doesn't depend on generated types.
+- `submitSignedTx` (both `frontend/src/lib/contract.ts` and
+  `sdk/src/client.ts`) polled `getTransaction` in an unbounded loop — a
+  dropped transaction that never lands on-chain hung the caller forever.
+  Capped at ~60s with a real error on timeout.
 
 ### Deployed
 - `ajo-circle` contract to Stellar testnet. Redeployed once, after adding
