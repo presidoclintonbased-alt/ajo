@@ -1,5 +1,7 @@
 # Ajo — Rotating Savings Circles on Stellar
 
+[![CI](https://github.com/presidoclintonbased-alt/ajo/actions/workflows/ci.yml/badge.svg)](https://github.com/presidoclintonbased-alt/ajo/actions/workflows/ci.yml)
+
 **A trustless Ajo/Esusu/Chama/Tanda circle, held by a smart contract instead of a person.**
 
 Ajo digitizes the rotating savings and credit association (ROSCA) — the informal
