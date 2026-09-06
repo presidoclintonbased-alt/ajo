@@ -1,4 +1,5 @@
 "use client";
+// Wallet context.
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { connectWallet as connect, signWithWallet, WalletError } from "@/lib/wallet";

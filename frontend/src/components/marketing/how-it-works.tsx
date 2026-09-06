@@ -1,4 +1,5 @@
 "use client";
+// How it works component.
 
 import { motion } from "framer-motion";
 

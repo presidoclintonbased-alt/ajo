@@ -1,3 +1,4 @@
+// Format test tests.
 import { describe, expect, it } from "vitest";
 import { assetLabel, formatCycleLength, formatDeadline, formatXlm, shortenAddress, xlmToStroops } from "./format";
 

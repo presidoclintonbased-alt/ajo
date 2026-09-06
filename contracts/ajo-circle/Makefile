@@ -1,3 +1,4 @@
+# Makefile.
 default: build
 
 all: test
