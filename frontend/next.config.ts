@@ -1,3 +1,4 @@
+// Next config configuration.
 import type { NextConfig } from "next";
 
 const securityHeaders = [

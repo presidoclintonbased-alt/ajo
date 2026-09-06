@@ -1,4 +1,5 @@
 "use client";
+// Navbar component.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";

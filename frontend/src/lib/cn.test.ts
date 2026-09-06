@@ -1,3 +1,4 @@
+// Cn test tests.
 import { describe, expect, it } from "vitest";
 import { cn } from "./cn";
 
