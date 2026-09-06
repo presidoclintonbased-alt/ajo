@@ -1,3 +1,4 @@
+# Cargo configuration.
 [package]
 name = "ajo-circle"
 version = "0.0.0"

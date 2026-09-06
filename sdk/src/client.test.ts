@@ -1,3 +1,4 @@
+// Client test tests.
 import { describe, expect, it } from "vitest";
 import { AjoClient, AjoContractError, CircleStatus, minLedgerFromRangeError } from "./client";
 
