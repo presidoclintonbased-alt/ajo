@@ -1,3 +1,4 @@
+// Badge component.
 import { cn } from "@/lib/cn";
 
 type BadgeTone = "gold" | "green" | "rose" | "muted";

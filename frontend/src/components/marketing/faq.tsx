@@ -1,4 +1,5 @@
 "use client";
+// Faq component.
 
 import { Disclosure } from "@/components/ui";
 
