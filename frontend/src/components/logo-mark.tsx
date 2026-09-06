@@ -1,3 +1,4 @@
+// Logo mark component.
 interface LogoMarkProps {
   size?: number;
   className?: string;

@@ -1,3 +1,4 @@
+// Wallet.
 import { getAddress, isConnected, signTransaction } from "@stellar/freighter-api";
 
 const NETWORK_PASSPHRASE =

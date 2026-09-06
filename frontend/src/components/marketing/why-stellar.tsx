@@ -1,4 +1,5 @@
 "use client";
+// Why stellar component.
 
 import { motion } from "framer-motion";
 import { Zap, ShieldCheck, Wallet, Eye } from "lucide-react";

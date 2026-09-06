@@ -1,3 +1,4 @@
+// Disclosure component.
 interface DisclosureProps {
   summary: string;
   children: React.ReactNode;

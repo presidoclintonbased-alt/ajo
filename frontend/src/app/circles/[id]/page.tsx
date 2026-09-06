@@ -1,4 +1,5 @@
 "use client";
+// [id] page.
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";

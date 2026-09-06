@@ -1,3 +1,4 @@
+// Circle cache.
 const STORAGE_KEY = "ajo_known_circle_ids";
 
 /**
