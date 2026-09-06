@@ -1,3 +1,4 @@
+// Format.
 const STROOPS_PER_XLM = 10_000_000n;
 
 export function formatXlm(stroops: bigint): string {

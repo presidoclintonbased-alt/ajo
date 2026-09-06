@@ -1,3 +1,4 @@
+// Footer component.
 import Link from "next/link";
 import { LogoMark } from "./logo-mark";
 

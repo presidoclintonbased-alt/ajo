@@ -1,3 +1,4 @@
+// Circle cache test tests.
 import { beforeEach, describe, expect, it } from "vitest";
 import { getKnownCircleIds, rememberCircleId, rememberCircleIds } from "./circle-cache";
 

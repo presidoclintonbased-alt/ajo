@@ -1,3 +1,4 @@
+// App layout.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fraunces, Outfit, IBM_Plex_Mono } from "next/font/google";
