@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
-import { AjoClient, CircleStatus } from "@ajo/sdk";
+import { AjoClient, CircleStatus, formatXlm, xlmToStroops } from "@ajo/sdk";
 import { loadConfig, saveConfig, configPath } from "./config";
 import { parseCycleSecs } from "./validate";
 
@@ -37,19 +37,6 @@ function signXdr(unsignedXdr: string, secretKey: string): string {
   const tx = TransactionBuilder.fromXDR(unsignedXdr, config.networkPassphrase);
   tx.sign(kp);
   return tx.toXDR();
-}
-
-function formatXlm(stroops: bigint): string {
-  const whole = stroops / 10_000_000n;
-  const frac = stroops % 10_000_000n;
-  if (frac === 0n) return whole.toString();
-  return `${whole}.${frac.toString().padStart(7, "0").replace(/0+$/, "")}`;
-}
-
-function xlmToStroops(xlm: string): bigint {
-  const [whole, frac = ""] = xlm.trim().split(".");
-  const paddedFrac = (frac + "0000000").slice(0, 7);
-  return BigInt(whole || "0") * 10_000_000n + BigInt(paddedFrac || "0");
 }
 
 const program = new Command();
