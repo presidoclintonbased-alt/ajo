@@ -64,6 +64,34 @@ fn rejects_invalid_circle_parameters() {
 }
 
 #[test]
+fn rejects_cycle_length_above_max() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let creator = Address::generate(&env);
+
+    assert_eq!(
+        client.try_create_circle(&creator, &token, &1_000, &3, &(MAX_CYCLE_LENGTH_SECS + 1)),
+        Err(Ok(ContractError::InvalidParams))
+    );
+    assert_eq!(
+        client.try_create_circle(&creator, &token, &1_000, &3, &u64::MAX),
+        Err(Ok(ContractError::InvalidParams))
+    );
+}
+
+#[test]
+fn accepts_cycle_length_at_max() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let creator = Address::generate(&env);
+
+    let id = client.create_circle(&creator, &token, &1_000, &3, &MAX_CYCLE_LENGTH_SECS);
+    assert_eq!(client.get_circle(&id).cycle_length_secs, MAX_CYCLE_LENGTH_SECS);
+}
+
+#[test]
 fn circle_activates_once_full_and_locks_join_order_as_payout_order() {
     let env = Env::default();
     let client = setup(&env);

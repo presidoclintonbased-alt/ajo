@@ -16,6 +16,12 @@ use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, token, Address, Env, Vec,
 };
 
+/// Upper bound on `cycle_length_secs` (366 days). Keeps
+/// `started_at + (current_cycle + 1) * cycle_length_secs` in `disburse` far
+/// from u64 overflow for any `max_members`, which would otherwise panic on
+/// every call and permanently strand an Active circle's pot.
+pub const MAX_CYCLE_LENGTH_SECS: u64 = 366 * 24 * 60 * 60;
+
 #[contracttype]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CircleStatus {
@@ -83,7 +89,11 @@ impl AjoCircleContract {
     ) -> Result<u64, ContractError> {
         creator.require_auth();
 
-        if contribution_amount <= 0 || max_members < 2 || cycle_length_secs == 0 {
+        if contribution_amount <= 0
+            || max_members < 2
+            || cycle_length_secs == 0
+            || cycle_length_secs > MAX_CYCLE_LENGTH_SECS
+        {
             return Err(ContractError::InvalidParams);
         }
 
