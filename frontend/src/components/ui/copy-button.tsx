@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/cn";
 
 interface CopyButtonProps {
@@ -18,7 +19,14 @@ export function CopyButton({ value, label = "Copy", className }: CopyButtonProps
   const isIconOnly = label === "";
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(value);
+    // The Clipboard API can reject (insecure context, permission denied,
+    // unsupported browser) — surface that instead of failing silently.
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      toast.error("Couldn't copy to clipboard. Please copy it manually.");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
