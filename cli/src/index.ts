@@ -40,6 +40,9 @@ function signXdr(unsignedXdr: string, secretKey: string): string {
 }
 
 const program = new Command();
+/** Shared help text for every `<id>` argument (#72). */
+const ID_ARG_HELP = "circle id (see `ajo circles list`)";
+
 program.name("ajo").description("Command-line client for Ajo rotating savings circles").version("0.1.0");
 
 program
@@ -99,21 +102,25 @@ circles
     }
   });
 
+async function showCircle(id: string) {
+  const ajo = client();
+  const c = await ajo.getCircle(BigInt(id));
+  console.log(`Circle #${c.id} — ${STATUS_NAMES[c.status]}`);
+  console.log(`  Creator:      ${c.creator}`);
+  console.log(`  Token:        ${c.token}`);
+  console.log(`  Contribution: ${formatXlm(c.contributionAmount)} per member`);
+  console.log(`  Members:      ${c.members.length}/${c.maxMembers}`);
+  console.log(`  Cycle:        ${c.currentCycle + 1} of ${c.maxMembers}`);
+  console.log(`  Payout order:`);
+  c.members.forEach((m, i) => console.log(`    ${i + 1}. ${m}${i === c.currentCycle ? "  (next payout)" : ""}`));
+}
+
 circles
-  .command("show <id>")
+  .command("show")
+  .argument("<id>", ID_ARG_HELP)
+  .alias("status")
   .description("Show a circle's full state")
-  .action(async (id: string) => {
-    const ajo = client();
-    const c = await ajo.getCircle(BigInt(id));
-    console.log(`Circle #${c.id} — ${STATUS_NAMES[c.status]}`);
-    console.log(`  Creator:      ${c.creator}`);
-    console.log(`  Token:        ${c.token}`);
-    console.log(`  Contribution: ${formatXlm(c.contributionAmount)} per member`);
-    console.log(`  Members:      ${c.members.length}/${c.maxMembers}`);
-    console.log(`  Cycle:        ${c.currentCycle + 1} of ${c.maxMembers}`);
-    console.log(`  Payout order:`);
-    c.members.forEach((m, i) => console.log(`    ${i + 1}. ${m}${i === c.currentCycle ? "  (next payout)" : ""}`));
-  });
+  .action(showCircle);
 
 circles
   .command("create")
@@ -144,7 +151,8 @@ circles
 
 function memberAction(name: "join" | "leave" | "contribute", build: (ajo: AjoClient, id: bigint, pk: string) => Promise<string>) {
   circles
-    .command(`${name} <id>`)
+    .command(name)
+    .argument("<id>", ID_ARG_HELP)
     .description(`${name[0].toUpperCase()}${name.slice(1)} a circle`)
     .action(async (id: string) => {
       const { secretKey, publicKey } = requireSecretKey();
@@ -160,7 +168,8 @@ memberAction("leave", (ajo, id, pk) => ajo.buildLeaveCircleTx(id, pk));
 memberAction("contribute", (ajo, id, pk) => ajo.buildContributeTx(id, pk));
 
 circles
-  .command("cancel <id>")
+  .command("cancel")
+  .argument("<id>", ID_ARG_HELP)
   .description("Cancel a circle you created, while it's still Forming")
   .action(async (id: string) => {
     const { secretKey, publicKey } = requireSecretKey();
@@ -170,16 +179,41 @@ circles
     console.log(`Circle #${id} cancelled.`);
   });
 
+async function disburseCircle(id: string) {
+  const { secretKey, publicKey } = requireSecretKey();
+  const ajo = client();
+  const unsigned = await ajo.buildDisburseTx(BigInt(id), publicKey);
+  await ajo.submitSignedTx(signXdr(unsigned, secretKey));
+  console.log(`Payout triggered for circle #${id}.`);
+}
+
 circles
-  .command("disburse <id>")
+  .command("disburse")
+  .argument("<id>", ID_ARG_HELP)
+  .alias("payout")
   .description("Trigger the current cycle's payout — callable by anyone, not just members")
-  .action(async (id: string) => {
-    const { secretKey, publicKey } = requireSecretKey();
-    const ajo = client();
-    const unsigned = await ajo.buildDisburseTx(BigInt(id), publicKey);
-    await ajo.submitSignedTx(signXdr(unsigned, secretKey));
-    console.log(`Payout triggered for circle #${id}.`);
-  });
+  .action(disburseCircle);
+
+// Top-level shortcuts (#72): `ajo status` / `ajo payout` previously weren't
+// commands at all, so `--help` on them fell through to the generic help.
+program
+  .command("status")
+  .argument("<id>", ID_ARG_HELP)
+  .description("Show a circle's status, members and payout order (same as `ajo circles show`)")
+  .addHelpText("after", "\nExample:\n  $ ajo status 3\n")
+  .action(showCircle);
+
+program
+  .command("payout")
+  .argument("<id>", ID_ARG_HELP)
+  .description(
+    "Trigger the current cycle's payout for a circle — callable by anyone (same as `ajo circles disburse`). Requires `ajo login`.",
+  )
+  .addHelpText("after", "\nExample:\n  $ ajo payout 3\n")
+  .action(disburseCircle);
+
+// Unknown commands / bad arguments print the relevant usage, not just an error (#72).
+program.showHelpAfterError("(run `ajo --help` or `ajo <command> --help` for usage)");
 
 program.parseAsync(process.argv).catch((err) => {
   console.error(err instanceof Error ? err.message : err);
