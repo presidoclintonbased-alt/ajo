@@ -424,6 +424,10 @@ fn disburse_fails_once_a_circle_is_completed_or_cancelled() {
         client.try_disburse(&completed),
         Err(Ok(ContractError::CircleNotActive))
     );
+    assert_eq!(
+        client.try_contribute(&completed, &a),
+        Err(Ok(ContractError::CircleNotActive))
+    );
 
     // Cancelled: never activated, so disburse was never valid to begin with.
     let cancelled = client.create_circle(&a, &token, &1_000, &2, &WEEK);
