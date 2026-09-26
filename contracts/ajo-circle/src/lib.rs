@@ -113,7 +113,9 @@ impl AjoCircleContract {
             current_cycle: 0,
             status: CircleStatus::Forming,
         };
-        env.storage().persistent().set(&DataKey::Circle(id), &circle);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Circle(id), &circle);
 
         env.events()
             .publish((symbol_short!("circle"), symbol_short!("created")), id);
@@ -145,10 +147,14 @@ impl AjoCircleContract {
             circle.started_at = env.ledger().timestamp();
         }
 
-        env.storage().persistent().set(&DataKey::Circle(circle_id), &circle);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Circle(circle_id), &circle);
 
-        env.events()
-            .publish((symbol_short!("circle"), symbol_short!("joined")), circle_id);
+        env.events().publish(
+            (symbol_short!("circle"), symbol_short!("joined")),
+            circle_id,
+        );
 
         Ok(())
     }
@@ -167,7 +173,9 @@ impl AjoCircleContract {
         let index = member_index(&circle.members, &member).ok_or(ContractError::NotAMember)?;
         circle.members.remove(index);
 
-        env.storage().persistent().set(&DataKey::Circle(circle_id), &circle);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Circle(circle_id), &circle);
 
         env.events()
             .publish((symbol_short!("circle"), symbol_short!("left")), circle_id);
@@ -197,10 +205,14 @@ impl AjoCircleContract {
         }
 
         circle.status = CircleStatus::Cancelled;
-        env.storage().persistent().set(&DataKey::Circle(circle_id), &circle);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Circle(circle_id), &circle);
 
-        env.events()
-            .publish((symbol_short!("circle"), symbol_short!("cancel")), circle_id);
+        env.events().publish(
+            (symbol_short!("circle"), symbol_short!("cancel")),
+            circle_id,
+        );
 
         Ok(())
     }
@@ -286,7 +298,9 @@ impl AjoCircleContract {
         if circle.current_cycle == member_count {
             circle.status = CircleStatus::Completed;
         }
-        env.storage().persistent().set(&DataKey::Circle(circle_id), &circle);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Circle(circle_id), &circle);
 
         env.events().publish(
             (symbol_short!("circle"), symbol_short!("payout")),
@@ -320,7 +334,10 @@ impl AjoCircleContract {
     /// starting at 1, so this doubles as the id of the most recently
     /// created circle.
     pub fn total_circles(env: Env) -> u64 {
-        env.storage().instance().get(&DataKey::NextCircleId).unwrap_or(0)
+        env.storage()
+            .instance()
+            .get(&DataKey::NextCircleId)
+            .unwrap_or(0)
     }
 }
 

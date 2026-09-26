@@ -88,7 +88,10 @@ fn accepts_cycle_length_at_max() {
     let creator = Address::generate(&env);
 
     let id = client.create_circle(&creator, &token, &1_000, &3, &MAX_CYCLE_LENGTH_SECS);
-    assert_eq!(client.get_circle(&id).cycle_length_secs, MAX_CYCLE_LENGTH_SECS);
+    assert_eq!(
+        client.get_circle(&id).cycle_length_secs,
+        MAX_CYCLE_LENGTH_SECS
+    );
 }
 
 #[test]
@@ -477,7 +480,10 @@ fn disburse_fails_once_a_circle_is_completed_or_cancelled() {
         client.contribute(&completed, &b);
         client.disburse(&completed);
     }
-    assert_eq!(client.get_circle(&completed).status, CircleStatus::Completed);
+    assert_eq!(
+        client.get_circle(&completed).status,
+        CircleStatus::Completed
+    );
     assert_eq!(
         client.try_disburse(&completed),
         Err(Ok(ContractError::CircleNotActive))
@@ -490,7 +496,10 @@ fn disburse_fails_once_a_circle_is_completed_or_cancelled() {
     // Cancelled: never activated, so disburse was never valid to begin with.
     let cancelled = client.create_circle(&a, &token, &1_000, &2, &WEEK);
     client.cancel_circle(&cancelled, &a);
-    assert_eq!(client.get_circle(&cancelled).status, CircleStatus::Cancelled);
+    assert_eq!(
+        client.get_circle(&cancelled).status,
+        CircleStatus::Cancelled
+    );
     assert_eq!(
         client.try_disburse(&cancelled),
         Err(Ok(ContractError::CircleNotActive))
