@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
 import { AjoClient, CircleStatus } from "@ajo/sdk";
 import { loadConfig, saveConfig, configPath } from "./config";
+import { parseCycleSecs } from "./validate";
 
 const STATUS_NAMES: Record<CircleStatus, string> = {
   [CircleStatus.Forming]: "Forming",
@@ -135,6 +136,7 @@ circles
   .option("-c, --cycle-secs <seconds>", "cycle length in seconds", "604800")
   .option("-t, --token <contractId>", "asset contract id (defaults to native XLM)")
   .action(async (opts: { amount: string; members: string; cycleSecs: string; token?: string }) => {
+    const cycleSecs = parseCycleSecs(opts.cycleSecs);
     const { secretKey, publicKey } = requireSecretKey();
     const config = loadConfig();
     const ajo = client();
@@ -143,7 +145,7 @@ circles
       opts.token ?? config.nativeTokenId,
       xlmToStroops(opts.amount),
       Number(opts.members),
-      BigInt(opts.cycleSecs),
+      cycleSecs,
     );
     const circleId = await ajo.submitSignedTx<bigint>(signXdr(unsigned, secretKey));
     console.log(
