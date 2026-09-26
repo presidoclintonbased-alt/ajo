@@ -169,6 +169,12 @@ impl AjoCircleContract {
     /// can call this, and only before the circle is `Active` — once it's
     /// active, members have already contributed and disburse's missed-
     /// deadline path is the mechanism for keeping funds unstuck, not this.
+    ///
+    /// The creator must also still be a member (#103): a creator who has
+    /// `leave_circle`d their own circle gives up the right to cancel it, so a
+    /// non-participant can't unilaterally shut down a circle made up entirely
+    /// of other people. Nothing is lost by this — a `Forming` circle holds no
+    /// funds, and each remaining member can still `leave_circle` on their own.
     pub fn cancel_circle(env: Env, circle_id: u64, caller: Address) -> Result<(), ContractError> {
         caller.require_auth();
 
@@ -176,7 +182,7 @@ impl AjoCircleContract {
         if circle.status != CircleStatus::Forming {
             return Err(ContractError::CircleNotForming);
         }
-        if caller != circle.creator {
+        if caller != circle.creator || !is_member(&circle.members, &caller) {
             return Err(ContractError::NotAuthorized);
         }
 
