@@ -7,3 +7,4 @@ export {
   describeContractError,
   parseContractErrorCode,
 } from "./errors";
+export { STROOPS_PER_XLM, formatXlm, xlmToStroops } from "./format";
