@@ -28,6 +28,7 @@ import {
 import { assetLabel, formatCycleLength, formatDeadline, formatXlm, shortenAddress } from "@/lib/format";
 import { rememberCircleId } from "@/lib/circle-cache";
 import { WalletError } from "@/lib/wallet";
+import { hasContributedCached, missedCountCached, invalidateCircleCache } from "@/lib/rpc-cache";
 
 const STATUS_TONE = {
   [CircleStatus.Forming]: "gold" as const,
@@ -77,16 +78,36 @@ export default function CircleDetailPage() {
       setCircle(loaded);
       rememberCircleId(circleId);
 
-      const rows = await Promise.all(
-        loaded.members.map(async (m): Promise<MemberRow> => ({
-          address: m,
-          paidThisCycle:
-            loaded.status === CircleStatus.Active
-              ? await hasContributed(circleId, loaded.currentCycle, m)
-              : false,
-          strikes: await missedCount(circleId, m),
-        })),
-      );
+      // Batch RPC calls with memoization to reduce round trips (#119)
+      // Use caching layer to avoid redundant RPC calls across refreshes
+      const contributionPromises: Promise<boolean>[] = [];
+      const missedPromises: Promise<number>[] = [];
+
+      // Fetch all contribution statuses in parallel (if circle is active)
+      if (loaded.status === CircleStatus.Active) {
+        for (const m of loaded.members) {
+          contributionPromises.push(
+            hasContributedCached(hasContributed, circleId, loaded.currentCycle, m),
+          );
+        }
+      }
+
+      // Fetch all missed counts in parallel
+      for (const m of loaded.members) {
+        missedPromises.push(missedCountCached(missedCount, circleId, m));
+      }
+
+      // Wait for all RPC calls to complete
+      const contributions = await Promise.all(contributionPromises);
+      const missed = await Promise.all(missedPromises);
+
+      // Build member rows from fetched results
+      const rows: MemberRow[] = loaded.members.map((m, i) => ({
+        address: m,
+        paidThisCycle: loaded.status === CircleStatus.Active ? contributions[i] ?? false : false,
+        strikes: missed[i] ?? 0,
+      }));
+
       setMembers(rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load this circle.");
@@ -112,6 +133,7 @@ export default function CircleDetailPage() {
       const signedXdr = await signTransaction(unsignedXdr);
       await submitSignedTx(signedXdr);
       toast.success("Joined circle");
+      invalidateCircleCache(circleId); // Clear cache after mutation (#119)
       await refresh();
     } catch (err) {
       toast.error(errorMessage(err, "Could not join circle."));
@@ -129,6 +151,7 @@ export default function CircleDetailPage() {
       const signedXdr = await signTransaction(unsignedXdr);
       await submitSignedTx(signedXdr);
       toast.success("Contribution sent");
+      invalidateCircleCache(circleId); // Clear cache after mutation (#119)
       await refresh();
     } catch (err) {
       toast.error(errorMessage(err, "Could not contribute."));
@@ -146,6 +169,7 @@ export default function CircleDetailPage() {
       const signedXdr = await signTransaction(unsignedXdr);
       await submitSignedTx(signedXdr);
       toast.success("Payout sent");
+      invalidateCircleCache(circleId); // Clear cache after mutation (#119)
       await refresh();
     } catch (err) {
       toast.error(errorMessage(err, "Not ready to pay out yet — every member must contribute, or the deadline must pass."));
@@ -163,6 +187,7 @@ export default function CircleDetailPage() {
       const signedXdr = await signTransaction(unsignedXdr);
       await submitSignedTx(signedXdr);
       toast.success("Left circle");
+      invalidateCircleCache(circleId); // Clear cache after mutation (#119)
       await refresh();
     } catch (err) {
       toast.error(errorMessage(err, "Could not leave circle."));
@@ -183,6 +208,7 @@ export default function CircleDetailPage() {
       const signedXdr = await signTransaction(unsignedXdr);
       await submitSignedTx(signedXdr);
       toast.success("Circle cancelled");
+      invalidateCircleCache(circleId); // Clear cache after mutation (#119)
       await refresh();
     } catch (err) {
       toast.error(errorMessage(err, "Could not cancel circle."));
