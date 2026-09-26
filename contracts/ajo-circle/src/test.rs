@@ -108,6 +108,36 @@ fn rejects_joining_a_full_or_already_active_circle() {
 }
 
 #[test]
+fn rejects_joining_a_completed_circle() {
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, asset) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+    asset.mint(&a, &10_000);
+    asset.mint(&b, &10_000);
+
+    let id = client.create_circle(&a, &token, &1_000, &2, &WEEK);
+    client.join_circle(&id, &b);
+
+    // Drive a full rotation so the circle reaches Completed.
+    for _ in 0..2 {
+        client.contribute(&id, &a);
+        client.contribute(&id, &b);
+        client.disburse(&id);
+    }
+    assert_eq!(client.get_circle(&id).status, CircleStatus::Completed);
+
+    // join_circle rejects any non-Forming status, so a fresh join on a
+    // completed circle must still return CircleNotForming.
+    let fresh = Address::generate(&env);
+    assert_eq!(
+        client.try_join_circle(&id, &fresh),
+        Err(Ok(ContractError::CircleNotForming))
+    );
+}
+
+#[test]
 fn rejects_the_same_member_joining_twice() {
     let env = Env::default();
     let client = setup(&env);
