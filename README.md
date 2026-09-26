@@ -133,6 +133,8 @@ and every rejected-input case. See `contracts/ajo-circle/src/test.rs`.
 leave, cancel, contribute, and disburse from a script or a shell instead of
 the web app. See [cli/README.md](./cli/README.md).
 
+> **Note:** The quickstart examples in the CLI use `--amount` (not `--contribution-amount`).
+
 ## Roadmap
 
 - Mainnet deployment.
