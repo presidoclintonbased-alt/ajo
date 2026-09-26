@@ -49,18 +49,34 @@ fn rejects_invalid_circle_parameters() {
     let (token, _, _) = create_token(&env);
     let creator = Address::generate(&env);
 
+    // total_circles should be 0 initially
+    assert_eq!(client.total_circles(), 0);
+
     assert_eq!(
         client.try_create_circle(&creator, &token, &0, &3, &WEEK),
         Err(Ok(ContractError::InvalidParams))
     );
+    // total_circles should still be 0 after rejected call
+    assert_eq!(client.total_circles(), 0);
+
     assert_eq!(
         client.try_create_circle(&creator, &token, &1_000, &1, &WEEK),
         Err(Ok(ContractError::InvalidParams))
     );
+    // total_circles should still be 0 after rejected call
+    assert_eq!(client.total_circles(), 0);
+
     assert_eq!(
         client.try_create_circle(&creator, &token, &1_000, &3, &0),
         Err(Ok(ContractError::InvalidParams))
     );
+    // total_circles should still be 0 after rejected call
+    assert_eq!(client.total_circles(), 0);
+
+    // A subsequent successful create_circle should still get id 1
+    let id = client.create_circle(&creator, &token, &1_000, &3, &WEEK);
+    assert_eq!(id, 1);
+    assert_eq!(client.total_circles(), 1);
 }
 
 #[test]
@@ -70,14 +86,27 @@ fn rejects_cycle_length_above_max() {
     let (token, _, _) = create_token(&env);
     let creator = Address::generate(&env);
 
+    // total_circles should be 0 initially
+    assert_eq!(client.total_circles(), 0);
+
     assert_eq!(
         client.try_create_circle(&creator, &token, &1_000, &3, &(MAX_CYCLE_LENGTH_SECS + 1)),
         Err(Ok(ContractError::InvalidParams))
     );
+    // total_circles should still be 0 after rejected call
+    assert_eq!(client.total_circles(), 0);
+
     assert_eq!(
         client.try_create_circle(&creator, &token, &1_000, &3, &u64::MAX),
         Err(Ok(ContractError::InvalidParams))
     );
+    // total_circles should still be 0 after rejected call
+    assert_eq!(client.total_circles(), 0);
+
+    // A subsequent successful create_circle should still get id 1
+    let id = client.create_circle(&creator, &token, &1_000, &3, &WEEK);
+    assert_eq!(id, 1);
+    assert_eq!(client.total_circles(), 1);
 }
 
 #[test]
