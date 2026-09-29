@@ -394,6 +394,46 @@ fn a_member_can_leave_a_forming_circle() {
 }
 
 #[test]
+fn rejoining_to_fill_the_last_slot_activates_the_circle() {
+    // #136: activation must also fire when the final slot is filled by a
+    // returning member, not only by a brand-new join. b leaves the circle
+    // while it is one slot short of full, and b's re-join is then the join
+    // that completes it.
+    let env = Env::default();
+    let client = setup(&env);
+    let (token, _, _) = create_token(&env);
+    let a = Address::generate(&env);
+    let b = Address::generate(&env);
+    let c = Address::generate(&env);
+
+    let id = client.create_circle(&a, &token, &1_000, &3, &WEEK);
+    client.join_circle(&id, &b);
+    // One slot short of full: 2 of 3 members, still Forming.
+    let short = client.get_circle(&id);
+    assert_eq!(short.members.len(), 2);
+    assert_eq!(short.status, CircleStatus::Forming);
+
+    // b leaves, freeing the third slot.
+    client.leave_circle(&id, &b);
+    assert_eq!(client.get_circle(&id).members.len(), 1);
+
+    // c takes one slot; b's re-join is then the join that fills the last one.
+    client.join_circle(&id, &c);
+    assert_eq!(client.get_circle(&id).status, CircleStatus::Forming);
+
+    client.join_circle(&id, &b);
+
+    let circle = client.get_circle(&id);
+    assert_eq!(circle.status, CircleStatus::Active);
+    assert_eq!(circle.started_at, env.ledger().timestamp());
+    // Join order still doubles as payout order: b rejoined last, so b is
+    // paid last even though b was originally the second member.
+    assert_eq!(circle.members.get(0).unwrap(), a);
+    assert_eq!(circle.members.get(1).unwrap(), c);
+    assert_eq!(circle.members.get(2).unwrap(), b);
+}
+
+#[test]
 fn rejects_leaving_a_circle_you_are_not_in_or_that_is_already_active() {
     let env = Env::default();
     let client = setup(&env);
