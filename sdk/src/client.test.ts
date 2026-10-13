@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Keypair, nativeToScVal, xdr } from "@stellar/stellar-sdk";
+import { Keypair, nativeToScVal, rpc, xdr } from "@stellar/stellar-sdk";
 import {
   AjoClient,
   AjoContractError,
@@ -8,6 +8,15 @@ import {
   minLedgerFromRangeError,
   sendWithRetry,
 } from "./client";
+import { ContractErrorCode } from "./errors";
+
+function simulationSuccess(retval: xdr.ScVal): rpc.Api.SimulateTransactionResponse {
+  return { result: { retval } } as unknown as rpc.Api.SimulateTransactionResponse;
+}
+
+function simulationError(error: string): rpc.Api.SimulateTransactionResponse {
+  return { error } as unknown as rpc.Api.SimulateTransactionResponse;
+}
 
 describe("AjoContractError", () => {
   it("is a real Error subclass with a stable name for narrowing", () => {
@@ -69,6 +78,51 @@ describe("AjoClient", () => {
     } as any);
 
     await expect(client.getCircle(999n)).rejects.toThrow("That circle doesn't exist.");
+  });
+
+  describe("read methods", () => {
+    const contractId = "CCL4M6UACHON7VFUBIXCLY5OGD2HLGAYV63W54MKFJ3UICWCHEBYBWTL";
+    const member = Keypair.random().publicKey();
+
+    function makeClient() {
+      return new AjoClient({ contractId });
+    }
+
+    it("decodes the hasContributed simulation result", async () => {
+      const client = makeClient();
+      vi.spyOn(client.server, "simulateTransaction").mockResolvedValue(simulationSuccess(nativeToScVal(true, { type: "bool" })));
+
+      await expect(client.hasContributed(42n, 3, member)).resolves.toBe(true);
+    });
+
+    it("decodes the missedCount simulation result", async () => {
+      const client = makeClient();
+      vi.spyOn(client.server, "simulateTransaction").mockResolvedValue(simulationSuccess(nativeToScVal(2, { type: "u32" })));
+
+      await expect(client.missedCount(42n, member)).resolves.toBe(2);
+    });
+
+    it("decodes the totalCircles simulation result", async () => {
+      const client = makeClient();
+      vi.spyOn(client.server, "simulateTransaction").mockResolvedValue(simulationSuccess(nativeToScVal(12n, { type: "u64" })));
+
+      await expect(client.totalCircles()).resolves.toBe(12n);
+    });
+
+    it.each([
+      ["hasContributed", (client: AjoClient) => client.hasContributed(42n, 3, member)],
+      ["missedCount", (client: AjoClient) => client.missedCount(42n, member)],
+      ["totalCircles", (client: AjoClient) => client.totalCircles()],
+    ])("propagates simulation errors from %s", async (_method, read) => {
+      const client = makeClient();
+      vi.spyOn(client.server, "simulateTransaction").mockResolvedValue(simulationError("HostError: Error(Contract, #9)"));
+
+      await expect(read(client)).rejects.toMatchObject({
+        name: "AjoContractError",
+        code: ContractErrorCode.InvalidParams,
+        message: "Invalid circle parameters.",
+      });
+    });
   });
 
   it("buildContributeTx supports custom memo string and Memo instances", async () => {
