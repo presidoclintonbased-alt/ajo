@@ -108,16 +108,24 @@ export async function sendWithRetry(
   server: rpc.Server,
   tx: Transaction | FeeBumpTransaction,
 ): Promise<rpc.Api.SendTransactionResponse> {
-  let sent = await server.sendTransaction(tx);
-  for (
-    let attempt = 0;
-    sent.status === "TRY_AGAIN_LATER" && attempt < SEND_TX_MAX_ATTEMPTS;
-    attempt++
-  ) {
-    await new Promise((resolve) => setTimeout(resolve, SEND_TX_RETRY_BASE_DELAY_MS * 2 ** attempt));
-    sent = await server.sendTransaction(tx);
+  let sent: rpc.Api.SendTransactionResponse | undefined;
+  for (let attempt = 0; attempt <= SEND_TX_MAX_ATTEMPTS; attempt++) {
+    try {
+      sent = await server.sendTransaction(tx);
+      if (sent.status === "TRY_AGAIN_LATER" && attempt < SEND_TX_MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, SEND_TX_RETRY_BASE_DELAY_MS * 2 ** attempt));
+        continue;
+      }
+      return sent;
+    } catch (err) {
+      if (attempt < SEND_TX_MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, SEND_TX_RETRY_BASE_DELAY_MS * 2 ** attempt));
+        continue;
+      }
+      throw err;
+    }
   }
-  return sent;
+  return sent!;
 }
 
 /** Read-only call, simulated against a throwaway account — no wallet or funds required. */

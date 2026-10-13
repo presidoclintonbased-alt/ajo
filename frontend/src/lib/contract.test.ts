@@ -64,4 +64,37 @@ describe("sendWithRetry (#150)", () => {
       vi.useRealTimers();
     }
   });
+
+  it("retries on transient network exceptions and recovers", async () => {
+    vi.useFakeTimers();
+    try {
+      const sendTransaction = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Network timeout"))
+        .mockResolvedValueOnce({ status: "PENDING", hash: "abc" });
+
+      const promise = sendWithRetry(mockServer(sendTransaction), {} as never);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      const result = await promise;
+      expect(result.status).toBe("PENDING");
+      expect(sendTransaction).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("throws the last error when all retry attempts fail due to network errors", async () => {
+    vi.useFakeTimers();
+    try {
+      const sendTransaction = vi.fn().mockRejectedValue(new Error("Connection reset"));
+      const promise = sendWithRetry(mockServer(sendTransaction), {} as never);
+      const rejection = expect(promise).rejects.toThrow("Connection reset");
+      await vi.advanceTimersByTimeAsync(60_000);
+      await rejection;
+      expect(sendTransaction).toHaveBeenCalledTimes(6);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
