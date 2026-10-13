@@ -9,7 +9,7 @@ interface CacheEntry<T> {
  * Simple in-memory cache for RPC call results with TTL.
  * Keyed by a composite string that includes circle_id, cycle, and member address.
  */
-class RPCCache {
+export class RPCCache {
   private cache = new Map<string, CacheEntry<unknown>>();
   private readonly defaultTTL: number;
 
@@ -81,6 +81,23 @@ class RPCCache {
   }
 
   /**
+   * Clear entries for a specific circle using exact prefix matching (#350).
+   * Matches "contrib:{circleId}:" and "missed:{circleId}:" prefixes to avoid
+   * accidentally deleting entries for other circles whose cycle number equals circleId.
+   */
+  clearCircle(circleId: bigint): void {
+    const contribPrefix = `contrib:${circleId}:`;
+    const missedPrefix = `missed:${circleId}:`;
+    const toDelete: string[] = [];
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(contribPrefix) || key.startsWith(missedPrefix)) {
+        toDelete.push(key);
+      }
+    }
+    toDelete.forEach((k) => this.cache.delete(k));
+  }
+
+  /**
    * Get cache statistics for debugging.
    */
   getStats(): { size: number; keys: string[] } {
@@ -140,5 +157,5 @@ export async function missedCountCached(
  * Call this after mutations (join/contribute/disburse/leave/cancel) to ensure fresh data.
  */
 export function invalidateCircleCache(circleId: bigint): void {
-  rpcCache.clearPattern(`:${circleId}:`);
+  rpcCache.clearCircle(circleId);
 }
