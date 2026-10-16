@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { Keypair, nativeToScVal, xdr } from "@stellar/stellar-sdk";
+import { Keypair, StrKey, Transaction, nativeToScVal, rpc, xdr } from "@stellar/stellar-sdk";
 import {
   AjoClient,
   AjoContractError,
   CircleStatus,
+  SIMULATION_SOURCE_ACCOUNT,
   decodeReturnValue,
   minLedgerFromRangeError,
   sendWithRetry,
@@ -69,6 +70,25 @@ describe("AjoClient", () => {
     } as any);
 
     await expect(client.getCircle(999n)).rejects.toThrow("That circle doesn't exist.");
+  });
+
+  it("uses constant placeholder account for read-only simulations and never calls Keypair.random (#370)", async () => {
+    expect(StrKey.isValidEd25519PublicKey(SIMULATION_SOURCE_ACCOUNT)).toBe(true);
+
+    const client = new AjoClient({
+      contractId: "CCL4M6UACHON7VFUBIXCLY5OGD2HLGAYV63W54MKFJ3UICWCHEBYBWTL",
+    });
+    const spyRandom = vi.spyOn(Keypair, "random");
+    const spySimulate = vi.spyOn(client.server, "simulateTransaction").mockResolvedValue({
+      result: { retval: xdr.ScVal.scvU64(new xdr.Uint64(10n)) },
+    } as unknown as rpc.Api.SimulateTransactionResponse);
+
+    const total = await client.totalCircles();
+    expect(total).toBe(10n);
+    expect(spyRandom).not.toHaveBeenCalled();
+    expect(spySimulate).toHaveBeenCalledTimes(1);
+    const tx = spySimulate.mock.calls[0][0] as Transaction;
+    expect(tx.source).toBe(SIMULATION_SOURCE_ACCOUNT);
   });
 
   it("buildContributeTx supports custom memo string and Memo instances", async () => {

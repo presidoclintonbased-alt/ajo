@@ -4,7 +4,6 @@ import {
   Address,
   Contract,
   FeeBumpTransaction,
-  Keypair,
   Transaction,
   TransactionBuilder,
   BASE_FEE,
@@ -14,6 +13,14 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 import { ContractErrorCode, describeContractError, parseContractErrorCode } from "./contract-errors";
+
+/**
+ * Constant placeholder public key used for read-only simulations (#370).
+ * Simulating a contract call requires a valid SourceAccount, but does not sign
+ * or broadcast the transaction, so generating a fresh random keypair on every
+ * read adds unnecessary CPU and memory overhead.
+ */
+export const SIMULATION_SOURCE_ACCOUNT = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
 
 const RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE =
@@ -122,7 +129,7 @@ export async function sendWithRetry(
 
 /** Read-only call, simulated against a throwaway account — no wallet or funds required. */
 async function readCall<T>(method: string, args: xdr.ScVal[]): Promise<T> {
-  const account = new Account(Keypair.random().publicKey(), "0");
+  const account = new Account(SIMULATION_SOURCE_ACCOUNT, "0");
   const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
     .addOperation(getContract().call(method, ...args))
     .setTimeout(30)
