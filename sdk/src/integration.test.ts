@@ -1,7 +1,7 @@
 // Integration test suite simulating SDK build-sign-submit lifecycle on local sandbox (#65).
 import { describe, expect, it, vi } from "vitest";
 import { Keypair, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
-import { AjoClient, CircleStatus } from "./client";
+import { AjoClient } from "./client";
 
 describe("SDK Local Network Sandbox Integration", () => {
   const contractId = "CCL4M6UACHON7VFUBIXCLY5OGD2HLGAYV63W54MKFJ3UICWCHEBYBWTL";
@@ -19,7 +19,7 @@ describe("SDK Local Network Sandbox Integration", () => {
       sequenceNumber: () => "1",
       incrementSequenceNumber: () => {},
       accountId: () => creatorKp.publicKey(),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.getAccount>>);
 
     vi.spyOn(client.server, "simulateTransaction").mockResolvedValue({
       result: { retval: xdr.ScVal.scvU64(new xdr.Uint64(1n)) },
@@ -34,7 +34,7 @@ describe("SDK Local Network Sandbox Integration", () => {
         }),
         resourceFee: new xdr.Int64(100n),
       }),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.simulateTransaction>>);
 
     // 1. Build unsigned transaction
     const unsignedXdr = await client.buildCreateCircleTx(
@@ -55,12 +55,12 @@ describe("SDK Local Network Sandbox Integration", () => {
     vi.spyOn(client.server, "sendTransaction").mockResolvedValue({
       status: "PENDING",
       hash: "sandbox-tx-hash-001",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.sendTransaction>>);
 
     vi.spyOn(client.server, "getTransaction").mockResolvedValue({
       status: "SUCCESS",
       returnValue: xdr.ScVal.scvU64(new xdr.Uint64(1n)),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.getTransaction>>);
 
     // 4. Submit and verify decoded response
     const newCircleId = await client.submitSignedTx<bigint>(signedXdr);
@@ -74,7 +74,7 @@ describe("SDK Local Network Sandbox Integration", () => {
       sequenceNumber: () => "2",
       incrementSequenceNumber: () => {},
       accountId: () => memberKp.publicKey(),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.getAccount>>);
 
     vi.spyOn(client.server, "simulateTransaction").mockResolvedValue({
       result: { retval: xdr.ScVal.scvVoid() },
@@ -89,7 +89,7 @@ describe("SDK Local Network Sandbox Integration", () => {
         }),
         resourceFee: new xdr.Int64(100n),
       }),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.simulateTransaction>>);
 
     const joinXdr = await client.buildJoinCircleTx(1n, memberKp.publicKey());
     expect(typeof joinXdr).toBe("string");

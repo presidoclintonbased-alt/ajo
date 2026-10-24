@@ -71,12 +71,13 @@ class RPCCache {
   }
 
   /**
-   * Clear entries matching a pattern (e.g., all entries for a specific circle).
+   * Clear entries whose key starts with the given prefix
+   * (e.g., all entries for a specific circle within a scope).
    */
-  clearPattern(pattern: string): void {
+  clearPrefix(prefix: string): void {
     const toDelete: string[] = [];
     for (const key of this.cache.keys()) {
-      if (key.includes(pattern)) {
+      if (key.startsWith(prefix)) {
         toDelete.push(key);
       }
     }
@@ -141,7 +142,12 @@ export async function missedCountCached(
 /**
  * Invalidate cache for a specific circle.
  * Call this after mutations (join/contribute/disburse/leave/cancel) to ensure fresh data.
+ * Matches only keys belonging to this circle ("contrib:{id}:" and "missed:{id}:"
+ * segments), so other circles whose cycle number happens to equal circleId are untouched.
  */
 export function invalidateCircleCache(circleId: bigint): void {
-  rpcCache.clearPattern(`:${circleId}:`);
+  const scope = cacheScope();
+  const circleSegment = `${circleId}:`;
+  rpcCache.clearPrefix(`${scope}:contrib:${circleSegment}`);
+  rpcCache.clearPrefix(`${scope}:missed:${circleSegment}`);
 }

@@ -3,11 +3,9 @@ import {
   Address,
   Contract,
   FeeBumpTransaction,
-  Keypair,
   Memo,
   Transaction,
   TransactionBuilder,
-  BASE_FEE,
   nativeToScVal,
   scValToNative,
   rpc,
@@ -169,7 +167,11 @@ export class AjoClient {
   private readonly networkPassphrase: string;
 
   constructor(config: AjoClientConfig) {
-    this.server = new rpc.Server(config.rpcUrl ?? DEFAULT_RPC_URL);
+    const rpcUrl = config.rpcUrl ?? DEFAULT_RPC_URL;
+    // Local sandboxes (e.g. the standalone network on localhost) serve plain
+    // HTTP; the SDK refuses insecure RPC endpoints unless explicitly allowed.
+    const allowHttp = rpcUrl.startsWith("http://");
+    this.server = new rpc.Server(rpcUrl, { allowHttp });
     this.contract = new Contract(config.contractId);
     this.contractId = config.contractId;
     this.networkPassphrase = config.networkPassphrase ?? DEFAULT_NETWORK_PASSPHRASE;
@@ -331,67 +333,63 @@ export class AjoClient {
    * nothing, so callers don't need a follow-up read to learn the result.
    */
   async submitSignedTx<T = unknown>(signedXdr: string): Promise<T | undefined> {
-    const tx = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
+    const tx = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase) as Transaction;
     const sent = await sendWithRetry(this.server, tx);
     if (sent.status === "ERROR") {
-      throw new AjoContractError(`Transaction rejected: ${JSON.stringify(sent.errorResult)}`);
+      throw AjoContractError.fromSimulationError(
+        sent.errorResult ? sent.errorResult.toXDR("base64") : "transaction submission failed",
+      );
     }
 
-    const maxAttempts = 40; // ~60s at 1.5s/poll — a dropped tx should never hang the caller forever
-    let result: rpc.Api.GetTransactionResponse | null = null;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        result = await this.server.getTransaction(sent.hash);
-        if (result.status !== "NOT_FOUND") {
-          break;
-        }
-      } catch (err) {
-        if (attempt === maxAttempts - 1) {
-          throw err;
-        }
+    // Poll for the ledger result. A DUPLICATE response means the transaction
+    // was already submitted, so we still poll for its outcome.
+    const POLL_INTERVAL_MS = 1_000;
+    const POLL_MAX_ATTEMPTS = 60;
+    for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
+      const status = await this.server.getTransaction(sent.hash);
+      if (status.status === "SUCCESS") {
+        return decodeReturnValue<T>(status.returnValue);
       }
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (status.status === "FAILED") {
+        throw AjoContractError.fromSimulationError(
+          status.resultXdr ? status.resultXdr.toXDR("base64") : "transaction failed",
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     }
-    if (!result || result.status === "NOT_FOUND") {
-      throw new AjoContractError(`Transaction ${sent.hash} was not found on-chain after ${maxAttempts} polls — it may have been dropped.`);
-    }
-    if (result.status !== "SUCCESS") {
-      throw new AjoContractError(`Transaction failed: ${JSON.stringify(result)}`);
-    }
-    return decodeReturnValue<T>(result.returnValue);
+    throw new AjoContractError(`Timed out waiting for transaction ${sent.hash} to land.`);
   }
 
+  // ---- internals ----
+
   private async readCall<T>(method: string, args: xdr.ScVal[]): Promise<T> {
-    const account = new Account(Keypair.random().publicKey(), "0");
-    const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: this.networkPassphrase })
+    const account = new Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "0");
+    const tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: this.networkPassphrase })
       .addOperation(this.contract.call(method, ...args))
       .setTimeout(30)
       .build();
-
     const sim = await this.server.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
       throw AjoContractError.fromSimulationError(sim.error);
     }
-    return scValToNative(sim.result!.retval) as T;
+    return decodeReturnValue<T>(sim.result?.retval) as T;
   }
 
   private async buildTx(
-    sourcePublicKey: string,
+    source: string,
     method: string,
     args: xdr.ScVal[],
     memo?: string | Memo,
   ): Promise<string> {
-    const account = await this.server.getAccount(sourcePublicKey);
-    const builder = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: this.networkPassphrase })
-      .addOperation(this.contract.call(method, ...args))
-      .setTimeout(60);
-
-    if (memo) {
-      builder.addMemo(typeof memo === "string" ? Memo.text(memo) : memo);
+    const account = await this.server.getAccount(source);
+    let builder = new TransactionBuilder(account, {
+      fee: "100",
+      networkPassphrase: this.networkPassphrase,
+    }).addOperation(this.contract.call(method, ...args));
+    if (memo !== undefined) {
+      builder = builder.addMemo(typeof memo === "string" ? Memo.text(memo) : memo);
     }
-
-    const tx = builder.build();
-
+    const tx = builder.setTimeout(300).build();
     const sim = await this.server.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
       throw AjoContractError.fromSimulationError(sim.error);
@@ -400,12 +398,13 @@ export class AjoClient {
   }
 }
 
-/** Extracts the lower bound from a Soroban RPC "startLedger must be within the ledger range: X - Y" error. */
-export function minLedgerFromRangeError(err: unknown): number | null {
-  const message =
-    typeof err === "object" && err !== null && "message" in err
-      ? String((err as { message: unknown }).message)
-      : String(err);
-  const match = /ledger range:\s*(\d+)/.exec(message);
+/**
+ * Extracts the minimum available ledger from an RPC "startLedger must be
+ * within the ledger range" style error, or returns null if the error is
+ * unrelated.
+ */
+function minLedgerFromRangeError(err: unknown): number | null {
+  const msg = err instanceof Error ? err.message : String(err);
+  const match = /ledger range[^\d]*(\d+)/i.exec(msg);
   return match ? Number(match[1]) : null;
 }

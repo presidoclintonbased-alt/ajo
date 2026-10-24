@@ -66,7 +66,7 @@ describe("AjoClient", () => {
     // Stub simulateTransaction to return a simulation error with Error(Contract, #1)
     vi.spyOn(client.server, "simulateTransaction").mockResolvedValue({
       error: "HostError: Error(Contract, #1)",
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.simulateTransaction>>);
 
     await expect(client.getCircle(999n)).rejects.toThrow("That circle doesn't exist.");
   });
@@ -80,7 +80,7 @@ describe("AjoClient", () => {
       sequenceNumber: () => "100",
       incrementSequenceNumber: () => {},
       accountId: () => testKp.publicKey(),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.getAccount>>);
     vi.spyOn(client.server, "simulateTransaction").mockResolvedValue({
       result: { retval: xdr.ScVal.scvVoid() },
       minResourceFee: "100",
@@ -94,7 +94,7 @@ describe("AjoClient", () => {
         }),
         resourceFee: new xdr.Int64(100n),
       }),
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof client.server.simulateTransaction>>);
 
     const xdrWithMemo = await client.buildContributeTx(
       1n,
